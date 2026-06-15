@@ -1,0 +1,158 @@
+---
+description: Application tech stack, dependency versions, and version-specific best practices
+alwaysApply: true
+---
+
+# Tech Stack
+
+Vite 8 + React 19 SPA with MUI, TanStack Query, and React Router. Consumes `binder_app_backend` NestJS API. See [project-structure.mdc](mdc:.cursor/rules/project-structure.mdc) for layout; [binder-mui-theme.mdc](mdc:.cursor/rules/binder-mui-theme.mdc) for brand theming.
+
+## Runtime
+
+| Component | Version | Notes |
+|-----------|---------|-------|
+| Node.js | **20** | `compose.yaml` uses `node:20`; prod build uses `node:20-alpine` |
+| nginx | **alpine** | Serves static `dist/` in production Docker image |
+| TypeScript | **6.0.3** | `strict: true`; project references (`tsconfig.app.json` + `tsconfig.node.json`) |
+| Browser target | **ES2023** | `target` / `lib` in `tsconfig.app.json` |
+
+Version columns show **resolved** versions from `package-lock.json`. Ranges in `package.json` use `^`.
+
+## Build & Dev Server
+
+| Package | Declared | Resolved | Role |
+|---------|----------|----------|------|
+| `vite` | ^8.0.12 | **8.0.16** | Dev server & production bundler |
+| `@vitejs/plugin-react` | ^6.0.1 | **6.0.2** | React Fast Refresh, JSX transform |
+
+### Vite 8 practices
+
+- Config lives in `vite.config.ts` — env via `loadEnv(mode, process.cwd(), '')`.
+- Path alias `@` → `src/` (mirror in `tsconfig.app.json` `paths`).
+- Dev server: port from `VITE_DEV_PORT` (default **3000**), `strictPort: true`, `host: true`.
+- **Only** `VITE_*` vars are exposed to client code via `import.meta.env` — never put secrets in env files.
+- Env vars for config only (`VITE_API_URL`, `VITE_APP_NAME`, `VITE_DEV_PORT`) — **not** for brand colors/fonts (see theme rule).
+- Production build: `npm run build` → `dist/`; Docker multi-stage copies to nginx.
+
+```typescript
+// Env access — typed in src/vite-env.d.ts
+import.meta.env.VITE_API_URL
+```
+
+## UI Framework
+
+| Package | Declared | Resolved | Role |
+|---------|----------|----------|------|
+| `react` | ^19.2.6 | **19.2.7** | UI library |
+| `react-dom` | ^19.2.6 | **19.2.7** | DOM renderer |
+| `@mui/material` | ^9.1.1 | **9.1.1** | Component library |
+| `@mui/icons-material` | ^9.1.1 | **9.1.1** | Icon set |
+| `@emotion/react` | ^11.14.0 | **11.14.0** | MUI styling engine (required) |
+| `@emotion/styled` | ^11.14.1 | **11.14.1** | Styled API (required by MUI) |
+
+### MUI 9 + React 19 practices
+
+- Keep `@mui/material` and `@mui/icons-material` on the **same major** (9.x).
+- Theme via `createTheme` in `src/theme/` — wrap app with `ThemeProvider` + `CssBaseline`.
+- **Do not** add CSS files, `styled()` wrappers, or hardcoded HEX in components — follow [binder-mui-theme.mdc](mdc:.cursor/rules/binder-mui-theme.mdc).
+- Prefer MUI props (`color`, `variant`) over `sx`; when using `sx`, reference palette keys (`background.paper`, `text.secondary`).
+- Use `@mui/icons-material` for icons — do not import random icon libraries unless approved.
+
+## Data Fetching & Routing
+
+| Package | Declared | Resolved | Role |
+|---------|----------|----------|------|
+| `@tanstack/react-query` | ^5.101.0 | **5.101.0** | Server state, caching, mutations |
+| `react-router-dom` | ^7.17.0 | **7.17.0** | Client routing (**installed, not wired yet**) |
+
+### TanStack Query practices
+
+- Single `QueryClient` at app root (currently in `App.tsx` — move to provider module when routing lands).
+- Default options already set: `retry: 1`, `refetchOnWindowFocus: false` — preserve unless changing globally.
+- Use `useQuery` / `useMutation` with typed query keys — define keys in feature modules or `src/api/`.
+- Invalidate related queries after mutations.
+
+### React Router practices (when implementing phase 2)
+
+- Use `createBrowserRouter` or `BrowserRouter` — SPA fallback already configured in `nginx.conf`.
+- Lazy-load page components with `React.lazy` + `Suspense` for code splitting.
+- Route guards live in `src/routes/` or `src/auth/` — not inline in every page.
+
+## Forms & Validation
+
+| Package | Declared | Resolved | Role |
+|---------|----------|----------|------|
+| `react-hook-form` | ^7.79.0 | **7.79.0** | Form state (**phase 3 — not used yet**) |
+| `@hookform/resolvers` | ^5.4.0 | **5.4.0** | Zod resolver bridge |
+| `zod` | ^4.4.3 | **4.4.3** | Schema validation |
+
+### Practices (phase 3)
+
+- Define Zod schemas in feature modules or `src/types/` — infer TS types with `z.infer<typeof schema>`.
+- Use `@hookform/resolvers/zod` with MUI `TextField` via `Controller` or `register`.
+- Do **not** add Formik, Yup, or other form libraries.
+
+## Backend Integration
+
+| Concern | Implementation |
+|---------|----------------|
+| HTTP client | Native **`fetch`** — no axios unless explicitly approved |
+| Auth | Cookie `httpOnly` `access_token` — always `credentials: 'include'` |
+| API base URL | `import.meta.env.VITE_API_URL` |
+| CORS | Backend `FRONTEND_HOST=http://localhost:3000` in dev |
+
+### Auth endpoints (backend — do not invent others)
+
+| Method | Path | Auth |
+|--------|------|------|
+| `POST` | `/auth/login` | Public |
+| `POST` | `/auth/logout` | Public |
+| `POST` | `/auth/password/forgot` | Public |
+| `POST` | `/auth/password/reset` | Public |
+| `GET` | `/user/me` | Cookie required |
+
+## Dev Tooling
+
+| Package | Declared | Resolved | Role |
+|---------|----------|----------|------|
+| `typescript` | ~6.0.2 | **6.0.3** | Type checking (`tsc -b` in build) |
+| `eslint` | ^10.3.0 | **10.5.0** | Linting (flat config) |
+| `typescript-eslint` | ^8.59.2 | **8.59.2** | TS rules |
+| `prettier` | ^3.8.4 | **3.8.4** | Formatting |
+| `eslint-plugin-react-hooks` | ^7.1.1 | — | Hooks rules |
+| `eslint-plugin-react-refresh` | ^0.5.2 | — | Vite HMR guard |
+
+### Practices
+
+- ESLint flat config in `eslint.config.js` — run `npm run lint` before committing.
+- TypeScript: `verbatimModuleSyntax: true` — use `import type` for type-only imports.
+- Prettier: `singleQuote: true`, `trailingComma: 'all'` — enforced via ESLint plugin.
+- No Jest/Vitest configured yet — do not assume a test runner exists.
+
+## Dependency Rules
+
+1. **Do not downgrade** React, MUI, or Vite independently — upgrade related packages together.
+2. **Do not add** axios, Redux, MobX, Tailwind, or styled-components unless explicitly requested.
+3. **Do not add** alternative UI libraries (Chakra, Ant Design) — MUI is the standard.
+4. **Prefer existing stack**: fetch → HTTP; TanStack Query → server state; react-hook-form + zod → forms; MUI → UI.
+5. Brand/theme changes go in `src/theme/` per [binder-mui-theme.mdc](mdc:.cursor/rules/binder-mui-theme.mdc) — not in components or env.
+6. After adding dependencies, run `npm install` and verify `npm run build` + `npm run lint` pass.
+
+## Quick Reference
+
+```bash
+npm run dev              # Vite dev server :3000
+docker compose up        # Dev in Docker (node:20, mounts volume)
+npm run build            # tsc -b && vite build → dist/
+npm run preview          # Preview production build locally
+npm run lint             # ESLint + Prettier
+```
+
+Production Docker:
+
+```bash
+docker build \
+  --build-arg VITE_API_URL=https://api.exemplo.com \
+  --build-arg VITE_APP_NAME="Binder App" \
+  -t binder_app_frontend .
+```

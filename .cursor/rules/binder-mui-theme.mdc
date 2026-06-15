@@ -1,0 +1,179 @@
+---
+description: Binder brand theme, dark/light MUI tokens, typography, and styling conventions
+alwaysApply: true
+---
+
+# Binder MUI Theme
+
+Admin panel frontend (`binder_app_frontend`). Brand source: Binder identity guide (PPT). Default theme: **dark**, with **light** mode and user toggle.
+
+## Architecture
+
+- **Vite** bundles assets and fonts — it has no theme API.
+- **MUI `createTheme`** owns colors, typography, spacing, and component defaults.
+- **Never** put brand colors or fonts in `vite.config.ts` or `.env`.
+
+```
+src/theme/
+├── tokens.ts              # raw HEX constants
+├── palette.ts             # getPalette('light' | 'dark')
+├── typography.ts          # font families and variants
+├── components.ts          # Mui* overrides
+├── index.ts               # getTheme(mode), exports darkTheme / lightTheme
+└── ThemeModeProvider.tsx  # context + localStorage toggle
+```
+
+Flow: `tokens` → `palette` + `typography` → `createTheme` + `components` → `ThemeModeProvider` → `ThemeProvider` → MUI components via props.
+
+Replace the current placeholder in `src/theme/index.ts` (MUI default blue/purple) when implementing.
+
+## Brand Color Tokens
+
+Use only these HEX values via `tokens.ts`. Never hardcode in components.
+
+| Token | HEX | Role |
+|-------|-----|------|
+| `orange.main` | `#F36B20` | Primary actions, active nav |
+| `orange.light` | `#FFA00A` | Hover, links on dark bg |
+| `orange.dark` | `#F85200` | Pressed states |
+| `teal.main` | `#27A59E` | Secondary |
+| `teal.light` | `#23CFC5` | Accents, badges, charts |
+| `green.main` | `#61BE6B` | Success |
+| `green.light` | `#54D462` | Success highlights |
+| `neutral.black` | `#101010` | Dark page background |
+| `neutral.charcoal` | `#21201F` | Dark surfaces (paper) |
+| `neutral.darkWarm` | `#1C1A19` | Elevated surfaces, gradient base |
+| `neutral.gray` | `#EDEDED` | Light dividers / secondary text (light mode) |
+| `neutral.white` | `#FFFFFF` | Light surfaces / dark-mode primary text |
+
+**Do not use:** PPT embedded theme colors (e.g. Google Slides `#4285F4`), CMYK values, or Arial from the deck.
+
+## Dark Theme (default)
+
+Map to MUI `palette` with `mode: 'dark'`:
+
+| MUI key | Value |
+|---------|-------|
+| `background.default` | `#101010` |
+| `background.paper` | `#21201F` |
+| `text.primary` | `#FFFFFF` |
+| `text.secondary` | `rgba(237, 237, 237, 0.7)` |
+| `divider` | `rgba(255, 255, 255, 0.12)` |
+| `primary` | orange scale, `contrastText: #FFFFFF` |
+| `secondary` | `#23CFC5`, `contrastText: #101010` |
+| `success` | `#54D462` |
+
+**Surface hierarchy:** page (`#101010`) → paper (`#21201F`) → elevated (`#1C1A19`).
+
+**Brand gradient** — login/hero layouts only, not global body or data screens:
+
+```
+radial-gradient(ellipse at 85% 15%, rgba(35, 207, 197, 0.15), transparent 50%),
+radial-gradient(ellipse at 70% 0%, rgba(243, 107, 32, 0.12), transparent 45%),
+#101010
+```
+
+Define gradient as a theme token or layout component override — not inline HEX in pages.
+
+**Logo on dark:** white version only.
+
+## Light Theme (toggle)
+
+Map to MUI `palette` with `mode: 'light'`:
+
+| MUI key | Value |
+|---------|-------|
+| `background.default` | `#FFFFFF` |
+| `background.paper` | `#FFFFFF` |
+| `text.primary` | `#21201F` |
+| `text.secondary` | `#434343` |
+| `divider` | `#EDEDED` |
+| `primary` / `secondary` / `success` | same brand tokens as dark |
+
+**Logo on light:** color or black version.
+
+## Theme Mode Behavior
+
+- **Default:** `dark`
+- **Toggle:** persist in `localStorage` key `binder-theme-mode`
+- **Fallback:** use `prefers-color-scheme` only when no stored preference
+- **Provider:** `ThemeModeProvider` wraps `ThemeProvider` with `useMemo(() => getTheme(mode), [mode])`
+- Export `darkTheme`, `lightTheme`, and `getTheme` from `src/theme/index.ts`
+
+## Typography
+
+| Role | Font | MUI mapping |
+|------|------|-------------|
+| UI / body | Montserrat (Gotham substitute) | `fontFamily`, `body1`, `body2`, `button`, `caption` |
+| Headings | DM Serif Display | `h1`–`h4` only |
+| Fallback | Verdana, sans-serif | end of `fontFamily` stack |
+
+**Font loading** (prefer bundled fonts):
+
+- **Preferred:** `@fontsource/montserrat` + `@fontsource/dm-serif-display` imported in `src/main.tsx`
+- **Alternative:** Google Fonts `<link>` in `index.html`
+
+Montserrat weights: 300, 400, 500, 700, 800.
+
+**Minimum body size:** 14px on `body1` — not the PPT 8pt minimum.
+
+## MUI-First Styling Policy
+
+Avoid CSS directly on components. Customize via the theme so components need minimal styling.
+
+**Preferred order:**
+
+1. MUI props — `color="primary"`, `variant="contained"`, `Typography variant="h2"`
+2. Theme `components` overrides in `src/theme/components.ts`
+3. `sx` with palette keys — `bgcolor: 'background.paper'`, `color: 'text.secondary'`, `p: 2`
+4. `sx` callback — `sx={(theme) => ({ borderColor: theme.palette.divider })}`
+
+**Forbidden unless explicitly approved:**
+
+- `.css` / `.module.css` for component styling
+- Inline `style={{ ... }}`
+- Hardcoded HEX/RGB in `sx` or components
+- `@emotion/styled` / `styled()` for one-off styles
+- Global CSS beyond `CssBaseline` and font imports
+
+**Required dark overrides in `components.ts`:**
+
+- `MuiPaper`: `backgroundImage: 'none'`
+- `MuiAppBar` / `MuiDrawer`: flat surfaces, `boxShadow: 'none'`, border via `palette.divider`
+
+```tsx
+// GOOD
+<Button color="primary" variant="contained">Salvar</Button>
+<Typography variant="h2">Empresas</Typography>
+<Box sx={{ bgcolor: 'background.paper', p: 3 }}>
+
+// BAD
+<Box sx={{ bgcolor: '#21201F', color: '#fff' }}>
+<div style={{ fontFamily: 'Montserrat' }}>
+```
+
+## Do Not Port from PPT
+
+- Slide layouts, mockup frames, funnel graphics, social-post templates
+- Full-page gradients on admin/data screens
+- Decorative "B" graphic on every screen (login/empty states only)
+- Black logo on dark backgrounds
+- Verdana as primary font
+
+## Layout Principles (from brand guide)
+
+- Left-aligned text in forms and data views
+- Clear hierarchy: title > subtitle > highlights > body
+- Generous spacing (`theme.spacing`, default grid 8px)
+- Safe margins; aligned icons and elements
+
+## Implementation Checklist
+
+When implementing or updating the theme:
+
+1. Create `tokens.ts` → `palette.ts` → `typography.ts` → `components.ts` → refactor `index.ts`
+2. Add font loading (`@fontsource` in `main.tsx` or Google Fonts in `index.html`)
+3. Add `ThemeModeProvider` with dark default, toggle, and `localStorage`
+4. Wire `App.tsx`: `ThemeModeProvider` → `CssBaseline`
+5. Audit components: no hardcoded colors; use palette keys only
+6. Add brand logos under `src/assets/brand/` when available
