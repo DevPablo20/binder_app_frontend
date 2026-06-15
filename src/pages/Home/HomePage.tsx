@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   CircularProgress,
@@ -6,7 +7,8 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/auth/useAuth';
 import { BinderLogo } from '@/components/BinderLogo';
@@ -14,7 +16,17 @@ import { ThemeModeToggle } from '@/theme/ThemeModeToggle';
 
 export function HomePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isLoading } = useAuth();
+  const [showPasswordResetSuccess, setShowPasswordResetSuccess] = useState(
+    () => Boolean(location.state?.passwordResetSuccess),
+  );
+
+  useEffect(() => {
+    if (location.state?.passwordResetSuccess) {
+      navigate('.', { replace: true, state: {} });
+    }
+  }, [location.state, navigate]);
 
   return (
     <Box
@@ -52,6 +64,16 @@ export function HomePage() {
           </Box>
         ) : (
           <Stack spacing={4} sx={{ alignItems: 'flex-start' }}>
+            {showPasswordResetSuccess && (
+              <Alert
+                severity="success"
+                sx={{ width: '100%' }}
+                onClose={() => setShowPasswordResetSuccess(false)}
+              >
+                Senha redefinida. Faça login com sua nova senha.
+              </Alert>
+            )}
+
             <BinderLogo
               sx={{
                 width: { xs: 'min(280px, 85vw)', sm: 340, md: 420 },
