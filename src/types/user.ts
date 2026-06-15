@@ -3,7 +3,7 @@ export type Role = 'superadmin' | 'editor' | 'viewer';
 export interface CompanySummary {
   id: string;
   name: string;
-  status: boolean;
+  isActive: boolean;
 }
 
 export interface MeResponse {

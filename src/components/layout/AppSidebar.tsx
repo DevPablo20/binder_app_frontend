@@ -1,20 +1,83 @@
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import BusinessIcon from '@mui/icons-material/Business';
 import MenuIcon from '@mui/icons-material/Menu';
 import {
   Box,
   Drawer,
   IconButton,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  ListSubheader,
   Tooltip,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import { useState } from 'react';
+import { NavLink } from 'react-router-dom';
 
+import { useAuth } from '@/auth/useAuth';
 import { BinderLogo } from '@/components/BinderLogo';
 import { UserOptionsDialog } from '@/components/layout/UserOptionsDialog';
 
 const DRAWER_WIDTH_EXPANDED = 240;
 const DRAWER_WIDTH_COLLAPSED = 72;
+
+function AdminNav({ expanded }: { expanded: boolean }) {
+  const { user } = useAuth();
+  const isSuperadmin = user?.role === 'superadmin';
+
+  if (!isSuperadmin) {
+    return null;
+  }
+
+  const navItem = (
+    <ListItemButton
+      component={NavLink}
+      to="/dashboard/admin"
+      sx={{
+        borderRadius: 1,
+        mx: expanded ? 1 : 0.5,
+        justifyContent: expanded ? 'flex-start' : 'center',
+        '&.active': {
+          bgcolor: 'action.selected',
+        },
+      }}
+    >
+      <ListItemIcon
+        sx={{
+          minWidth: expanded ? 40 : 0,
+          justifyContent: 'center',
+        }}
+      >
+        <BusinessIcon />
+      </ListItemIcon>
+      {expanded && <ListItemText primary="Empresas" />}
+    </ListItemButton>
+  );
+
+  if (!expanded) {
+    return (
+      <Box sx={{ px: 0.5, py: 1 }}>
+        <Tooltip title="Empresas">{navItem}</Tooltip>
+      </Box>
+    );
+  }
+
+  return (
+    <List
+      subheader={
+        <ListSubheader component="div" sx={{ bgcolor: 'transparent', lineHeight: 2 }}>
+          Painel do Administrador
+        </ListSubheader>
+      }
+      sx={{ px: 0, py: 1 }}
+    >
+      {navItem}
+    </List>
+  );
+}
 
 function SidebarContent({
   expanded,
@@ -62,6 +125,8 @@ function SidebarContent({
           />
         )}
       </Box>
+
+      <AdminNav expanded={expanded} />
 
       <Box sx={{ flexGrow: 1 }} />
 
