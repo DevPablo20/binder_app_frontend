@@ -14,14 +14,8 @@ import {
   Typography,
 } from '@mui/material';
 
+import { ROLE_LABELS } from '@/auth/roles';
 import type { CompanyWithUsers } from '@/types/company';
-import type { Role } from '@/types/user';
-
-const ROLE_LABELS: Record<Role, string> = {
-  superadmin: 'Superadmin',
-  editor: 'Editor',
-  viewer: 'Visualizador',
-};
 
 interface CompanyUsersDrawerProps {
   company: CompanyWithUsers | null;
@@ -60,11 +54,7 @@ export function CompanyUsersDrawer({
               <Typography variant="h6" component="h2" noWrap>
                 {company.name}
               </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mt: 1 }}
-              >
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 {company.description}
               </Typography>
               <Box
@@ -103,9 +93,7 @@ export function CompanyUsersDrawer({
 
           {company.users.length === 0 ? (
             <Box sx={{ px: 2.5, py: 4, textAlign: 'center' }}>
-              <GroupIcon
-                sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }}
-              />
+              <GroupIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
               <Typography variant="body2" color="text.secondary">
                 Nenhum usuário vinculado a esta empresa.
               </Typography>

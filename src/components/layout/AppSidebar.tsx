@@ -1,93 +1,47 @@
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import BusinessIcon from '@mui/icons-material/Business';
 import MenuIcon from '@mui/icons-material/Menu';
 import {
   Box,
+  Divider,
   Drawer,
   IconButton,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  ListSubheader,
   Tooltip,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
 
 import { useAuth } from '@/auth/useAuth';
 import { BinderLogo } from '@/components/BinderLogo';
+import { CompanySwitcherSlot } from '@/components/layout/CompanySwitcherSlot';
+import { SidebarAccountStrip } from '@/components/layout/SidebarAccountStrip';
+import { SidebarNavGroup } from '@/components/layout/SidebarNavGroup';
 import { UserOptionsDialog } from '@/components/layout/UserOptionsDialog';
+import {
+  NAV_SECTION_LABELS,
+  getVisibleNavItems,
+  groupNavItemsBySection,
+} from '@/navigation/navConfig';
 
 const DRAWER_WIDTH_EXPANDED = 240;
 const DRAWER_WIDTH_COLLAPSED = 72;
-
-function AdminNav({ expanded }: { expanded: boolean }) {
-  const { user } = useAuth();
-  const isSuperadmin = user?.role === 'superadmin';
-
-  if (!isSuperadmin) {
-    return null;
-  }
-
-  const navItem = (
-    <ListItemButton
-      component={NavLink}
-      to="/dashboard/admin"
-      sx={{
-        borderRadius: 1,
-        mx: expanded ? 1 : 0.5,
-        justifyContent: expanded ? 'flex-start' : 'center',
-        '&.active': {
-          bgcolor: 'action.selected',
-        },
-      }}
-    >
-      <ListItemIcon
-        sx={{
-          minWidth: expanded ? 40 : 0,
-          justifyContent: 'center',
-        }}
-      >
-        <BusinessIcon />
-      </ListItemIcon>
-      {expanded && <ListItemText primary="Empresas" />}
-    </ListItemButton>
-  );
-
-  if (!expanded) {
-    return (
-      <Box sx={{ px: 0.5, py: 1 }}>
-        <Tooltip title="Empresas">{navItem}</Tooltip>
-      </Box>
-    );
-  }
-
-  return (
-    <List
-      subheader={
-        <ListSubheader component="div" sx={{ bgcolor: 'transparent', lineHeight: 2 }}>
-          Painel do Administrador
-        </ListSubheader>
-      }
-      sx={{ px: 0, py: 1 }}
-    >
-      {navItem}
-    </List>
-  );
-}
 
 function SidebarContent({
   expanded,
   onMenuClick,
   onUserClick,
+  onNavClick,
 }: {
   expanded: boolean;
   onMenuClick: () => void;
   onUserClick: () => void;
+  onNavClick?: () => void;
 }) {
+  const { user } = useAuth();
+  const navGroups = groupNavItemsBySection(getVisibleNavItems(user?.role));
+  const workspaceItems = navGroups.workspace ?? [];
+  const adminItems = navGroups.admin ?? [];
+  const showDivider = workspaceItems.length > 0 && adminItems.length > 0;
+
   return (
     <Box
       sx={{
@@ -126,29 +80,29 @@ function SidebarContent({
         )}
       </Box>
 
-      <AdminNav expanded={expanded} />
-
-      <Box sx={{ flexGrow: 1 }} />
+      <CompanySwitcherSlot />
 
       <Box
-        sx={{
-          display: 'flex',
-          justifyContent: expanded ? 'flex-start' : 'center',
-          p: 1,
-          pb: 2,
-        }}
+        sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}
       >
-        <Tooltip title="Opções do usuário">
-          <IconButton
-            onClick={onUserClick}
-            aria-label="Opções do usuário"
-            color="inherit"
-            size="large"
-          >
-            <AccountCircleIcon />
-          </IconButton>
-        </Tooltip>
+        <SidebarNavGroup
+          title={NAV_SECTION_LABELS.workspace}
+          items={workspaceItems}
+          expanded={expanded}
+          onItemClick={onNavClick}
+        />
+
+        {showDivider && <Divider sx={{ mx: 1, my: 0.5 }} />}
+
+        <SidebarNavGroup
+          title={NAV_SECTION_LABELS.admin}
+          items={adminItems}
+          expanded={expanded}
+          onItemClick={onNavClick}
+        />
       </Box>
+
+      <SidebarAccountStrip expanded={expanded} onClick={onUserClick} />
     </Box>
   );
 }
@@ -240,6 +194,7 @@ export function AppSidebar() {
         <SidebarContent
           expanded
           onMenuClick={handleClose}
+          onNavClick={handleClose}
           onUserClick={() => {
             handleClose();
             setUserDialogOpen(true);

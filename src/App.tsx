@@ -3,6 +3,7 @@ import { CssBaseline } from '@mui/material';
 import { RouterProvider } from 'react-router-dom';
 
 import { AuthProvider } from '@/auth/AuthProvider';
+import { ActiveCompanyProvider } from '@/company/ActiveCompanyProvider';
 import { router } from '@/routes';
 import { ThemeModeProvider } from '@/theme/ThemeModeProvider';
 
@@ -21,7 +22,9 @@ function App() {
       <ThemeModeProvider>
         <CssBaseline />
         <AuthProvider>
-          <RouterProvider router={router} />
+          <ActiveCompanyProvider>
+            <RouterProvider router={router} />
+          </ActiveCompanyProvider>
         </AuthProvider>
       </ThemeModeProvider>
     </QueryClientProvider>

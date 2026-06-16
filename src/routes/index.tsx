@@ -3,10 +3,12 @@ import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { AdminPanelPage } from '@/pages/AdminPanel/AdminPanelPage';
 import { DashboardPage } from '@/pages/Dashboard/DashboardPage';
 import { HomePage } from '@/pages/Home/HomePage';
+import { InvitesPage } from '@/pages/Invites/InvitesPage';
 import { LoginPage } from '@/pages/Login/LoginPage';
 import { PasswordForgotPage } from '@/pages/PasswordForgot/PasswordForgotPage';
 import { PasswordResetPage } from '@/pages/PasswordReset/PasswordResetPage';
 import { GuestRoute, RequireAuth } from '@/routes/GuestRoute';
+import { RequireMinRole } from '@/routes/RequireMinRole';
 import { RequireRole } from '@/routes/RequireRole';
 
 export const router = createBrowserRouter([
@@ -39,7 +41,19 @@ export const router = createBrowserRouter([
         element: <DashboardPage />,
       },
       {
+        path: '/dashboard/invites',
+        element: (
+          <RequireMinRole minRole="editor">
+            <InvitesPage />
+          </RequireMinRole>
+        ),
+      },
+      {
         path: '/dashboard/admin',
+        element: <Navigate to="/dashboard/admin/companies" replace />,
+      },
+      {
+        path: '/dashboard/admin/companies',
         element: (
           <RequireRole role="superadmin">
             <AdminPanelPage />
