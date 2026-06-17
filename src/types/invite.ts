@@ -25,3 +25,22 @@ export interface CreateInvitePayload {
 export interface InviteMessageResponse {
   message: string;
 }
+
+export interface InvitePublicDetails {
+  email: string;
+  role: Role;
+  status: InviteStatus;
+  expiresAt: string;
+  inviterName: string;
+  companies: { id: string; name: string; isActive: boolean }[];
+}
+
+export interface AcceptInvitePayload {
+  token: string;
+  name: string;
+  password: string;
+}
+
+export interface RefuseInvitePayload {
+  token: string;
+}

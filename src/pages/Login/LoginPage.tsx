@@ -11,9 +11,9 @@ import {
   Typography,
 } from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 
 import { login } from '@/api/auth';
@@ -30,8 +30,18 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [apiError, setApiError] = useState<string | null>(null);
+  const [showInviteAcceptedSuccess, setShowInviteAcceptedSuccess] = useState(
+    () => Boolean(location.state?.inviteAcceptedSuccess),
+  );
+
+  useEffect(() => {
+    if (location.state?.inviteAcceptedSuccess) {
+      navigate('.', { replace: true, state: {} });
+    }
+  }, [location.state, navigate]);
 
   const {
     register,
@@ -81,6 +91,16 @@ export function LoginPage() {
           <Typography variant="h4" component="h1">
             Login
           </Typography>
+
+          {showInviteAcceptedSuccess && (
+            <Alert
+              severity="success"
+              sx={{ width: '100%' }}
+              onClose={() => setShowInviteAcceptedSuccess(false)}
+            >
+              Conta criada. Faça login com seu e-mail e senha.
+            </Alert>
+          )}
 
           {apiError && (
             <Alert severity="error" sx={{ width: '100%' }}>

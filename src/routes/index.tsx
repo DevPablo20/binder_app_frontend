@@ -4,7 +4,9 @@ import { AdminPanelPage } from '@/pages/AdminPanel/AdminPanelPage';
 import { AdminUsersPage } from '@/pages/AdminPanel/AdminUsersPage';
 import { DashboardPage } from '@/pages/Dashboard/DashboardPage';
 import { HomePage } from '@/pages/Home/HomePage';
+import { AcceptInvitePage } from '@/pages/Invites/AcceptInvitePage';
 import { InvitesPage } from '@/pages/Invites/InvitesPage';
+import { RefuseInvitePage } from '@/pages/Invites/RefuseInvitePage';
 import { LoginPage } from '@/pages/Login/LoginPage';
 import { PasswordForgotPage } from '@/pages/PasswordForgot/PasswordForgotPage';
 import { PasswordResetPage } from '@/pages/PasswordReset/PasswordResetPage';
@@ -33,6 +35,14 @@ export const router = createBrowserRouter([
   {
     path: '/password/reset/:token',
     element: <PasswordResetPage />,
+  },
+  {
+    path: '/invite/accept/:token',
+    element: <AcceptInvitePage />,
+  },
+  {
+    path: '/invite/refuse/:token',
+    element: <RefuseInvitePage />,
   },
   {
     element: <RequireAuth />,

@@ -18,12 +18,18 @@ export function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isLoading } = useAuth();
-  const [showPasswordResetSuccess, setShowPasswordResetSuccess] = useState(
-    () => Boolean(location.state?.passwordResetSuccess),
+  const [showPasswordResetSuccess, setShowPasswordResetSuccess] = useState(() =>
+    Boolean(location.state?.passwordResetSuccess),
+  );
+  const [showInviteRefusedSuccess, setShowInviteRefusedSuccess] = useState(() =>
+    Boolean(location.state?.inviteRefusedSuccess),
   );
 
   useEffect(() => {
-    if (location.state?.passwordResetSuccess) {
+    if (
+      location.state?.passwordResetSuccess ||
+      location.state?.inviteRefusedSuccess
+    ) {
       navigate('.', { replace: true, state: {} });
     }
   }, [location.state, navigate]);
@@ -71,6 +77,15 @@ export function HomePage() {
                 onClose={() => setShowPasswordResetSuccess(false)}
               >
                 Senha redefinida. Faça login com sua nova senha.
+              </Alert>
+            )}
+            {showInviteRefusedSuccess && (
+              <Alert
+                severity="info"
+                sx={{ width: '100%' }}
+                onClose={() => setShowInviteRefusedSuccess(false)}
+              >
+                Convite recusado com sucesso.
               </Alert>
             )}
 
