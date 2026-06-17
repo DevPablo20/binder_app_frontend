@@ -1,6 +1,10 @@
 import { apiFetch } from '@/api/client';
-import type { MeResponse } from '@/types/user';
+import type { MeResponse, UserWithCompanies } from '@/types/user';
 
 export function getMe(): Promise<MeResponse> {
   return apiFetch<MeResponse>('/user/me');
+}
+
+export function getUsers(): Promise<UserWithCompanies[]> {
+  return apiFetch<UserWithCompanies[]>('/user');
 }

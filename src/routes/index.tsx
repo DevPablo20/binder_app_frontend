@@ -1,6 +1,7 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 
 import { AdminPanelPage } from '@/pages/AdminPanel/AdminPanelPage';
+import { AdminUsersPage } from '@/pages/AdminPanel/AdminUsersPage';
 import { DashboardPage } from '@/pages/Dashboard/DashboardPage';
 import { HomePage } from '@/pages/Home/HomePage';
 import { InvitesPage } from '@/pages/Invites/InvitesPage';
@@ -57,6 +58,14 @@ export const router = createBrowserRouter([
         element: (
           <RequireRole role="superadmin">
             <AdminPanelPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: '/dashboard/admin/users',
+        element: (
+          <RequireRole role="superadmin">
+            <AdminUsersPage />
           </RequireRole>
         ),
       },

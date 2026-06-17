@@ -16,3 +16,12 @@ export interface MeResponse {
   updatedAt: string;
   companies: CompanySummary[];
 }
+
+export interface UserWithCompanies {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  isActive: boolean;
+  companies: CompanySummary[];
+}

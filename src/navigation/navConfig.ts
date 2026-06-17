@@ -1,6 +1,7 @@
 import BusinessIcon from '@mui/icons-material/Business';
 import HomeIcon from '@mui/icons-material/Home';
 import MailOutlinedIcon from '@mui/icons-material/MailOutlined';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import type { SvgIconComponent } from '@mui/icons-material';
 
 import { hasMinRole } from '@/auth/roles';
@@ -46,6 +47,14 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Empresas',
     path: '/dashboard/admin/companies',
     icon: BusinessIcon,
+    section: 'admin',
+    minRole: 'superadmin',
+  },
+  {
+    id: 'admin-users',
+    label: 'Usuários',
+    path: '/dashboard/admin/users',
+    icon: PeopleAltOutlinedIcon,
     section: 'admin',
     minRole: 'superadmin',
   },
