@@ -1,7 +1,8 @@
 import type { Role } from '@/types/user';
 
-export interface UserSummary {
+export interface UserWithMembership {
   id: string;
+  membershipId: string;
   name: string;
   email: string;
   role: Role;
@@ -18,7 +19,7 @@ export interface CompanyDetail {
 }
 
 export interface CompanyWithUsers extends CompanyDetail {
-  users: UserSummary[];
+  users: UserWithMembership[];
 }
 
 export interface CreateCompanyPayload {

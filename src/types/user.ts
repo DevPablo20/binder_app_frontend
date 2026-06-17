@@ -6,6 +6,13 @@ export interface CompanySummary {
   isActive: boolean;
 }
 
+export interface CompanyWithMembership {
+  id: string;
+  membershipId: string;
+  name: string;
+  isActive: boolean;
+}
+
 export interface MeResponse {
   id: string;
   name: string;
@@ -23,5 +30,5 @@ export interface UserWithCompanies {
   email: string;
   role: Role;
   isActive: boolean;
-  companies: CompanySummary[];
+  companies: CompanyWithMembership[];
 }
