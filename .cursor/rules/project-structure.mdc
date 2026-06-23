@@ -112,29 +112,29 @@ Sibling project: `../binder_app_backend/`
 |---------|--------|
 | Auth | JWT in `httpOnly` cookie `access_token` |
 | Fetch | Always `credentials: 'include'` on authenticated requests |
-| Session | `GET /user/me` returns profile + active companies |
+| Session | `GET /access/users/me` returns profile + active companies |
 | Roles | `Superadmin`, `Editor`, `Viewer` (backend `Role` enum) |
 | Swagger | `http://localhost:8090/api` (dev) |
 
 ### Known backend routes (do not invent endpoints)
 
-**Auth** (`/auth`):
+**Auth** (`/access/auth`):
 
-- `POST /auth/login`, `POST /auth/logout`
-- `POST /auth/password/forgot`, `POST /auth/password/reset`
+- `POST /access/auth/login`, `POST /access/auth/logout`
+- `POST /access/auth/password/forgot`, `POST /access/auth/password/reset`
 
-**User** (`/user`):
+**User** (`/access/users`):
 
-- `GET /user/me` — authenticated profile
-- Additional user CRUD routes exist on backend — check `binder_app_backend/src/user/` before implementing UI
+- `GET /access/users/me` — authenticated profile
+- Additional user CRUD routes exist on backend — check `binder_app_backend/src/access/user/` before implementing UI
 
-**Other modules** on backend: `company/`, `invite/` — implement frontend pages only when backend endpoints are confirmed in source.
+**Other Access modules** on backend: `access/company/`, `access/invite/`, `access/user-company/` — implement frontend pages only when backend endpoints are confirmed in source.
 
 ## Implementation Phases
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| **1 — Infra** | `fetch` client, auth context, `/user/me`, protected routes | Not started |
+| **1 — Infra** | `fetch` client, auth context, `/access/users/me`, protected routes | Not started |
 | **2 — Core screens** | Login, dashboard, companies, users, invites | Not started |
 | **3 — Public flows** | Accept/decline invite, password reset | Not started |
 | **Theme** | Binder brand tokens, dark default, light toggle | Rule written; code pending |
