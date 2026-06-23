@@ -12,7 +12,7 @@ export function revokeMembership(
   membershipId: string,
 ): Promise<UserCompanyMembership> {
   return apiFetch<UserCompanyMembership>(
-    `/user-company/${membershipId}/revoke`,
+    `/access/user-companies/${membershipId}/revoke`,
     { method: 'PATCH' },
   );
 }
@@ -21,8 +21,11 @@ export function syncUserCompanies(
   userId: string,
   companyIds: string[],
 ): Promise<UserWithCompanies> {
-  return apiFetch<UserWithCompanies>(`/user-company/user/${userId}/sync`, {
-    method: 'PUT',
-    body: { companyIds },
-  });
+  return apiFetch<UserWithCompanies>(
+    `/access/user-companies/user/${userId}/sync`,
+    {
+      method: 'PUT',
+      body: { companyIds },
+    },
+  );
 }

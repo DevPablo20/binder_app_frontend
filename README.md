@@ -93,7 +93,7 @@ src/
 
 ## Próximas fases
 
-1. **Infra de API e auth** — cliente `fetch` com `credentials`, contexto de sessão (`/user/me`), rotas protegidas
+1. **Infra de API e auth** — cliente `fetch` com `credentials`, contexto de sessão (`/access/users/me`), rotas protegidas
 2. **Telas core** — login, dashboard, empresas, usuários, convites
 3. **Fluxos públicos** — aceitar/recusar convite, reset de senha
 

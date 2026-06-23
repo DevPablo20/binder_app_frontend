@@ -105,11 +105,11 @@ import.meta.env.VITE_API_URL
 
 | Method | Path | Auth |
 |--------|------|------|
-| `POST` | `/auth/login` | Public |
-| `POST` | `/auth/logout` | Public |
-| `POST` | `/auth/password/forgot` | Public |
-| `POST` | `/auth/password/reset` | Public |
-| `GET` | `/user/me` | Cookie required |
+| `POST` | `/access/auth/login` | Public |
+| `POST` | `/access/auth/logout` | Public |
+| `POST` | `/access/auth/password/forgot` | Public |
+| `POST` | `/access/auth/password/reset` | Public |
+| `GET` | `/access/users/me` | Cookie required |
 
 ## Dev Tooling
 

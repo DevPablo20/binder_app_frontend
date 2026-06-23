@@ -7,13 +7,13 @@ import type {
 } from '@/types/company';
 
 export function getCompanies(): Promise<CompanyWithUsers[]> {
-  return apiFetch<CompanyWithUsers[]>('/company');
+  return apiFetch<CompanyWithUsers[]>('/access/companies');
 }
 
 export function createCompany(
   body: CreateCompanyPayload,
 ): Promise<CompanyDetail> {
-  return apiFetch<CompanyDetail>('/company', {
+  return apiFetch<CompanyDetail>('/access/companies', {
     method: 'POST',
     body,
   });
@@ -22,7 +22,7 @@ export function createCompany(
 export function updateCompanies(
   body: BulkUpdateCompaniesPayload,
 ): Promise<CompanyDetail[]> {
-  return apiFetch<CompanyDetail[]>('/company', {
+  return apiFetch<CompanyDetail[]>('/access/companies', {
     method: 'PATCH',
     body,
   });
