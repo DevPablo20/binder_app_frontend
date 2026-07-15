@@ -2,13 +2,10 @@ import { Navigate, createBrowserRouter } from 'react-router-dom';
 
 import { AdminPanelPage } from '@/pages/AdminPanel/AdminPanelPage';
 import { AdminUsersPage } from '@/pages/AdminPanel/AdminUsersPage';
-<<<<<<< Updated upstream
-=======
 import { BuyingTypesPage } from '@/pages/Catalog/BuyingTypesPage';
 import { ChannelsPage } from '@/pages/Catalog/ChannelsPage';
 import { PlatformsPage } from '@/pages/Catalog/PlatformsPage';
 import { ClientsPage } from '@/pages/Clients/ClientsPage';
->>>>>>> Stashed changes
 import { DashboardPage } from '@/pages/Dashboard/DashboardPage';
 import { HomePage } from '@/pages/Home/HomePage';
 import { AcceptInvitePage } from '@/pages/Invites/AcceptInvitePage';
@@ -59,8 +56,6 @@ export const router = createBrowserRouter([
         element: <DashboardPage />,
       },
       {
-<<<<<<< Updated upstream
-=======
         path: '/dashboard/clients',
         element: (
           <RequireRole role="superadmin">
@@ -93,7 +88,6 @@ export const router = createBrowserRouter([
         element: <BuyingTypesPage />,
       },
       {
->>>>>>> Stashed changes
         path: '/dashboard/invites',
         element: <Navigate to="/dashboard/admin/invites" replace />,
       },

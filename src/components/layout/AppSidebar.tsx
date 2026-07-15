@@ -17,6 +17,7 @@ import { SidebarNavGroup } from '@/components/layout/SidebarNavGroup';
 import { UserOptionsDialog } from '@/components/layout/UserOptionsDialog';
 import {
   NAV_SECTION_LABELS,
+  NAV_SECTION_ORDER,
   getVisibleNavItems,
   groupNavItemsBySection,
 } from '@/navigation/navConfig';
@@ -37,9 +38,9 @@ function SidebarContent({
 }) {
   const { user } = useAuth();
   const navGroups = groupNavItemsBySection(getVisibleNavItems(user?.role));
-  const workspaceItems = navGroups.workspace ?? [];
-  const adminItems = navGroups.admin ?? [];
-  const showDivider = workspaceItems.length > 0 && adminItems.length > 0;
+  const visibleSections = NAV_SECTION_ORDER.filter(
+    (section) => (navGroups[section]?.length ?? 0) > 0,
+  );
 
   return (
     <Box
@@ -79,29 +80,20 @@ function SidebarContent({
         )}
       </Box>
 
-<<<<<<< Updated upstream
-      <CompanySwitcherSlot />
-
-=======
->>>>>>> Stashed changes
       <Box
         sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}
       >
-        <SidebarNavGroup
-          title={NAV_SECTION_LABELS.workspace}
-          items={workspaceItems}
-          expanded={expanded}
-          onItemClick={onNavClick}
-        />
-
-        {showDivider && <Divider sx={{ mx: 1, my: 0.5 }} />}
-
-        <SidebarNavGroup
-          title={NAV_SECTION_LABELS.admin}
-          items={adminItems}
-          expanded={expanded}
-          onItemClick={onNavClick}
-        />
+        {visibleSections.map((section, index) => (
+          <Box key={section}>
+            {index > 0 && <Divider sx={{ mx: 1, my: 0.5 }} />}
+            <SidebarNavGroup
+              title={NAV_SECTION_LABELS[section]}
+              items={navGroups[section] ?? []}
+              expanded={expanded}
+              onItemClick={onNavClick}
+            />
+          </Box>
+        ))}
       </Box>
 
       <SidebarAccountStrip expanded={expanded} onClick={onUserClick} />
