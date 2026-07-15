@@ -2,6 +2,13 @@ import { Navigate, createBrowserRouter } from 'react-router-dom';
 
 import { AdminPanelPage } from '@/pages/AdminPanel/AdminPanelPage';
 import { AdminUsersPage } from '@/pages/AdminPanel/AdminUsersPage';
+<<<<<<< Updated upstream
+=======
+import { BuyingTypesPage } from '@/pages/Catalog/BuyingTypesPage';
+import { ChannelsPage } from '@/pages/Catalog/ChannelsPage';
+import { PlatformsPage } from '@/pages/Catalog/PlatformsPage';
+import { ClientsPage } from '@/pages/Clients/ClientsPage';
+>>>>>>> Stashed changes
 import { DashboardPage } from '@/pages/Dashboard/DashboardPage';
 import { HomePage } from '@/pages/Home/HomePage';
 import { AcceptInvitePage } from '@/pages/Invites/AcceptInvitePage';
@@ -52,12 +59,43 @@ export const router = createBrowserRouter([
         element: <DashboardPage />,
       },
       {
-        path: '/dashboard/invites',
+<<<<<<< Updated upstream
+=======
+        path: '/dashboard/clients',
         element: (
-          <RequireMinRole minRole="editor">
-            <InvitesPage />
-          </RequireMinRole>
+          <RequireRole role="superadmin">
+            <ClientsPage />
+          </RequireRole>
         ),
+      },
+      {
+        path: '/dashboard/campaigns',
+        element: <Navigate to="/dashboard/clients" replace />,
+      },
+      {
+        path: '/dashboard/groupings',
+        element: <Navigate to="/dashboard/clients" replace />,
+      },
+      {
+        path: '/dashboard/catalog',
+        element: <Navigate to="/dashboard/catalog/platforms" replace />,
+      },
+      {
+        path: '/dashboard/catalog/platforms',
+        element: <PlatformsPage />,
+      },
+      {
+        path: '/dashboard/catalog/channels',
+        element: <ChannelsPage />,
+      },
+      {
+        path: '/dashboard/catalog/buying-types',
+        element: <BuyingTypesPage />,
+      },
+      {
+>>>>>>> Stashed changes
+        path: '/dashboard/invites',
+        element: <Navigate to="/dashboard/admin/invites" replace />,
       },
       {
         path: '/dashboard/admin',
@@ -77,6 +115,14 @@ export const router = createBrowserRouter([
           <RequireRole role="superadmin">
             <AdminUsersPage />
           </RequireRole>
+        ),
+      },
+      {
+        path: '/dashboard/admin/invites',
+        element: (
+          <RequireMinRole minRole="editor">
+            <InvitesPage />
+          </RequireMinRole>
         ),
       },
     ],

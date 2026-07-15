@@ -1,4 +1,8 @@
 import BusinessIcon from '@mui/icons-material/Business';
+<<<<<<< Updated upstream
+=======
+import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined';
+>>>>>>> Stashed changes
 import HomeIcon from '@mui/icons-material/Home';
 import MailOutlinedIcon from '@mui/icons-material/MailOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
@@ -21,7 +25,12 @@ export interface NavItem {
 
 export const NAV_SECTION_LABELS: Record<NavSection, string> = {
   workspace: 'Área de trabalho',
+<<<<<<< Updated upstream
   admin: 'Painel do administrador',
+=======
+  catalog: 'Catálogo de mídia',
+  admin: 'Administração',
+>>>>>>> Stashed changes
 };
 
 export const NAV_ITEMS: NavItem[] = [
@@ -35,12 +44,29 @@ export const NAV_ITEMS: NavItem[] = [
     end: true,
   },
   {
+<<<<<<< Updated upstream
     id: 'invites',
     label: 'Convites',
     path: '/dashboard/invites',
     icon: MailOutlinedIcon,
     section: 'workspace',
     minRole: 'editor',
+=======
+    id: 'business',
+    label: 'Negócio',
+    path: '/dashboard/clients',
+    icon: StorefrontOutlinedIcon,
+    section: 'workspace',
+    minRole: 'superadmin',
+  },
+  {
+    id: 'catalog',
+    label: 'Catálogo',
+    path: '/dashboard/catalog',
+    icon: CategoryOutlinedIcon,
+    section: 'catalog',
+    minRole: 'viewer',
+>>>>>>> Stashed changes
   },
   {
     id: 'admin-companies',
@@ -57,6 +83,14 @@ export const NAV_ITEMS: NavItem[] = [
     icon: PeopleAltOutlinedIcon,
     section: 'admin',
     minRole: 'superadmin',
+  },
+  {
+    id: 'admin-invites',
+    label: 'Convites',
+    path: '/dashboard/admin/invites',
+    icon: MailOutlinedIcon,
+    section: 'admin',
+    minRole: 'editor',
   },
 ];
 

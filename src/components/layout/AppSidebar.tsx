@@ -12,7 +12,6 @@ import { useState } from 'react';
 
 import { useAuth } from '@/auth/useAuth';
 import { BinderLogo } from '@/components/BinderLogo';
-import { CompanySwitcherSlot } from '@/components/layout/CompanySwitcherSlot';
 import { SidebarAccountStrip } from '@/components/layout/SidebarAccountStrip';
 import { SidebarNavGroup } from '@/components/layout/SidebarNavGroup';
 import { UserOptionsDialog } from '@/components/layout/UserOptionsDialog';
@@ -80,8 +79,11 @@ function SidebarContent({
         )}
       </Box>
 
+<<<<<<< Updated upstream
       <CompanySwitcherSlot />
 
+=======
+>>>>>>> Stashed changes
       <Box
         sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}
       >
