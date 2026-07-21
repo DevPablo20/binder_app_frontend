@@ -1,6 +1,7 @@
 import BusinessIcon from '@mui/icons-material/Business';
 import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined';
 import HomeIcon from '@mui/icons-material/Home';
+import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
 import MailOutlinedIcon from '@mui/icons-material/MailOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
@@ -9,7 +10,7 @@ import type { SvgIconComponent } from '@mui/icons-material';
 import { hasMinRole } from '@/auth/roles';
 import type { Role } from '@/types/user';
 
-export type NavSection = 'workspace' | 'catalog' | 'admin';
+export type NavSection = 'workspace' | 'catalog' | 'bridge' | 'admin';
 
 export interface NavItem {
   id: string;
@@ -24,6 +25,7 @@ export interface NavItem {
 export const NAV_SECTION_LABELS: Record<NavSection, string> = {
   workspace: 'Área de trabalho',
   catalog: 'Catálogo de mídia',
+  bridge: 'Vinculação',
   admin: 'Administração',
 };
 
@@ -52,6 +54,14 @@ export const NAV_ITEMS: NavItem[] = [
     icon: CategoryOutlinedIcon,
     section: 'catalog',
     minRole: 'viewer',
+  },
+  {
+    id: 'bridge',
+    label: 'Vinculação',
+    path: '/dashboard/bridge',
+    icon: LinkOutlinedIcon,
+    section: 'bridge',
+    minRole: 'superadmin',
   },
   {
     id: 'admin-companies',
@@ -101,5 +111,6 @@ export function groupNavItemsBySection(
 export const NAV_SECTION_ORDER: NavSection[] = [
   'workspace',
   'catalog',
+  'bridge',
   'admin',
 ];

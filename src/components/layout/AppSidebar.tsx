@@ -104,23 +104,30 @@ function SidebarContent({
 export function AppSidebar() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
-  const [open, setOpen] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [userDialogOpen, setUserDialogOpen] = useState(false);
 
+  const open = pinned || hovered;
+
   const handleToggle = () => {
-    setOpen((prev) => !prev);
+    setPinned((prev) => !prev);
   };
 
-  const handleClose = () => {
-    setOpen(false);
+  const handleMobileClose = () => {
+    setMobileOpen(false);
   };
 
-  const drawerWidth = open ? DRAWER_WIDTH_EXPANDED : DRAWER_WIDTH_COLLAPSED;
+  // Reserve collapsed width unless pinned so hover expand overlays content.
+  const layoutWidth = pinned ? DRAWER_WIDTH_EXPANDED : DRAWER_WIDTH_COLLAPSED;
+  const paperWidth = open ? DRAWER_WIDTH_EXPANDED : DRAWER_WIDTH_COLLAPSED;
 
   const drawerPaperSx = {
-    width: drawerWidth,
+    width: paperWidth,
     boxSizing: 'border-box',
     overflowX: 'hidden',
+    zIndex: hovered && !pinned ? theme.zIndex.drawer + 1 : undefined,
     transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.enteringScreen,
@@ -132,8 +139,14 @@ export function AppSidebar() {
       <>
         <Drawer
           variant="permanent"
+          slotProps={{
+            paper: {
+              onMouseEnter: () => setHovered(true),
+              onMouseLeave: () => setHovered(false),
+            },
+          }}
           sx={{
-            width: drawerWidth,
+            width: layoutWidth,
             flexShrink: 0,
             '& .MuiDrawer-paper': drawerPaperSx,
           }}
@@ -168,15 +181,15 @@ export function AppSidebar() {
       >
         <SidebarContent
           expanded={false}
-          onMenuClick={() => setOpen(true)}
+          onMenuClick={() => setMobileOpen(true)}
           onUserClick={() => setUserDialogOpen(true)}
         />
       </Drawer>
 
       <Drawer
         variant="temporary"
-        open={open}
-        onClose={handleClose}
+        open={mobileOpen}
+        onClose={handleMobileClose}
         ModalProps={{ keepMounted: true }}
         sx={{
           '& .MuiDrawer-paper': {
@@ -187,10 +200,10 @@ export function AppSidebar() {
       >
         <SidebarContent
           expanded
-          onMenuClick={handleClose}
-          onNavClick={handleClose}
+          onMenuClick={handleMobileClose}
+          onNavClick={handleMobileClose}
           onUserClick={() => {
-            handleClose();
+            handleMobileClose();
             setUserDialogOpen(true);
           }}
         />

@@ -2,6 +2,10 @@ import { Navigate, createBrowserRouter } from 'react-router-dom';
 
 import { AdminPanelPage } from '@/pages/AdminPanel/AdminPanelPage';
 import { AdminUsersPage } from '@/pages/AdminPanel/AdminUsersPage';
+import { AccountMatchingPage } from '@/pages/Bridge/AccountMatchingPage';
+import { AdGroupMatchingPage } from '@/pages/Bridge/AdGroupMatchingPage';
+import { AdMatchingPage } from '@/pages/Bridge/AdMatchingPage';
+import { CampaignMatchingPage } from '@/pages/Bridge/CampaignMatchingPage';
 import { BuyingTypesPage } from '@/pages/Catalog/BuyingTypesPage';
 import { ChannelsPage } from '@/pages/Catalog/ChannelsPage';
 import { PlatformsPage } from '@/pages/Catalog/PlatformsPage';
@@ -86,6 +90,42 @@ export const router = createBrowserRouter([
       {
         path: '/dashboard/catalog/buying-types',
         element: <BuyingTypesPage />,
+      },
+      {
+        path: '/dashboard/bridge',
+        element: <Navigate to="/dashboard/bridge/accounts" replace />,
+      },
+      {
+        path: '/dashboard/bridge/accounts',
+        element: (
+          <RequireRole role="superadmin">
+            <AccountMatchingPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: '/dashboard/bridge/campaigns',
+        element: (
+          <RequireRole role="superadmin">
+            <CampaignMatchingPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: '/dashboard/bridge/ad-groups',
+        element: (
+          <RequireRole role="superadmin">
+            <AdGroupMatchingPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: '/dashboard/bridge/ads',
+        element: (
+          <RequireRole role="superadmin">
+            <AdMatchingPage />
+          </RequireRole>
+        ),
       },
       {
         path: '/dashboard/invites',
