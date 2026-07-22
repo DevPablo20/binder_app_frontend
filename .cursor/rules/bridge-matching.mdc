@@ -1,0 +1,64 @@
+---
+description: Bridge Vinculação matching UX — system targets first, multi-select ETL, hierarchy filters
+globs: src/pages/Bridge/**/*,src/api/bridge*.ts,src/api/platform-account.ts,src/api/platform-object-map.ts,src/types/bridge.ts
+alwaysApply: false
+---
+
+# Bridge Matching (Vinculação)
+
+Ops UI to map lake/ETL identities onto Binder metadata. Superadmin-only writes. Backend contracts live in `binder_app_backend/src/bridge/`.
+
+## Pages and routes
+
+| Route | Component | Maps |
+|-------|-----------|------|
+| `/dashboard/bridge/accounts` | `AccountMatchingPage` | `PlatformAccount` |
+| `/dashboard/bridge/campaigns` | `CampaignMatchingPage` → `ObjectMatchingPage` | `PlatformObjectMap` `campaign` |
+| `/dashboard/bridge/ad-groups` | `AdGroupMatchingPage` | `PlatformObjectMap` `ad_group` |
+| `/dashboard/bridge/ads` | `AdMatchingPage` | `PlatformObjectMap` `ad` |
+
+Shared shell: `BridgePageShell` + route-based `BridgeTabs`.
+
+## UX pattern (all flows)
+
+1. **System targets first** — filters at top (client, platform, Binder campaign, and level-specific enrichment).
+2. **Two checkbox tables** — **Disponíveis (ETL)** and **Vinculados**.
+3. **Bulk actions** — Associar / Remover / (accounts) Alterar cliente / (objects) Atualizar enriquecimento, with confirm dialogs.
+4. **Row click toggles selection** — [`CheckboxDataTable`](mdc:src/pages/Bridge/components/CheckboxDataTable.tsx); checkbox still works.
+
+Do **not** revert to one-shot “pick ETL row → dialog” matching.
+
+## Accounts flow
+
+- Filters: **Client** + **Platform** (required).
+- Disponíveis: `GET /bridge/catalog/:platformId?objectType=account&unmatchedOnly=true` **without** `clientId` (global unmatched pool — an account can belong to only one client).
+- Vinculados: `GET /bridge/platform-accounts?clientId=&platformId=`.
+- Associate: parallel `POST /bridge/platform-accounts`.
+- Remove: `DELETE /bridge/platform-accounts` `{ ids }` — **cascades all child object maps**.
+- Change client: confirm → `PATCH` with new `clientId` (backend hard-deletes child maps first).
+
+## Object maps flows (campaign / ad_group / ad)
+
+- Filters: Client + Platform + Binder campaign (required). Campaign flow also requires Channel + BuyingType. Ad group: optional SubGroupings. Ad: campaign only (Format UI deferred).
+- Disponíveis: catalog `unmatchedOnly` + `clientId`. Disable rows without `platformAccountId`.
+- **Hierarchy filter (required):**
+  - `ad_group` — only rows whose ETL `campaignId` is already a `PlatformObjectMap` (`objectType=campaign`) for the selected Binder campaign.
+  - `ad` — only rows whose ETL `adGroupId` is already mapped as `ad_group` for that Binder campaign.
+- Vinculados: maps for Binder `campaignId` + `objectType`, scoped to accounts of the selected client/platform.
+- Associate: parallel `POST /bridge/platform-object-maps` with shared Binder targets (+ level enrichment).
+- Remove: `DELETE /bridge/platform-object-maps` `{ ids }`.
+- Edit enrichment (campaign / ad_group vinculados): bulk `PATCH`.
+
+## Backend level rules (do not bypass in UI)
+
+| `objectType` | Enrichment |
+|--------------|------------|
+| `campaign` | channel + buyingType required |
+| `ad_group` | optional subGroupings only |
+| `ad` | optional format/subFormat when API exists; UI deferred |
+
+## Out of scope for this UI
+
+- Format / SubFormat selectors (no media Format HTTP API yet)
+- Parent FK columns on Bridge entities (hierarchy stays in lake)
+- Soft-delete history of removed maps

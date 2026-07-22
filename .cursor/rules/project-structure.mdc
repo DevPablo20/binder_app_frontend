@@ -13,19 +13,15 @@ Vite + React admin panel for the Binder multi-company platform. Consumes `binder
 binder_app_frontend/
 ├── src/                    # Application source (edit here)
 ├── dist/                   # Production build output — do not edit
-├── public/                 # Static assets copied as-is (favicon.svg, icons.svg)
+├── public/                 # Static assets
 ├── .cursor/rules/          # Cursor agent rules
-├── compose.yaml            # Dev: node:20, port 3000
-├── Dockerfile              # Multi-stage: node build → nginx serve
-├── nginx.conf              # SPA fallback (try_files → index.html)
-├── index.html              # HTML shell, script → /src/main.tsx
-├── vite.config.ts          # Vite config, @ alias, dev port
-├── .env.development        # Dev env vars (gitignored copy of .env.example)
-├── .env.example            # Env template
-├── package.json
-├── tsconfig.json           # Project references root
-├── tsconfig.app.json       # App TS config (src/)
-└── tsconfig.node.json      # Vite config TS
+├── compose.yaml
+├── Dockerfile
+├── nginx.conf
+├── index.html
+├── vite.config.ts
+├── .env.example
+└── package.json
 ```
 
 ## Entry Points
@@ -33,148 +29,102 @@ binder_app_frontend/
 | File | Role |
 |------|------|
 | `index.html` | HTML shell; mounts `#root`; loads `src/main.tsx` |
-| `src/main.tsx` | React root: `createRoot`, `StrictMode`, renders `App` |
-| `src/App.tsx` | App shell: `QueryClientProvider`, `ThemeProvider`, `CssBaseline` |
-| `src/vite-env.d.ts` | Types for `import.meta.env` (`VITE_*`) |
+| `src/main.tsx` | React root |
+| `src/App.tsx` | Providers + `RouterProvider` |
+| `src/routes/index.tsx` | `createBrowserRouter` route tree |
 
-## Source Tree (`src/`)
-
-### Implemented (exists today)
+## Source Tree (`src/`) — implemented
 
 ```
 src/
-├── main.tsx
-├── App.tsx                 # Placeholder landing; providers wired here
-├── vite-env.d.ts
-├── theme/
-│   └── index.ts            # MUI createTheme placeholder (Binder theme pending)
-├── assets/
-│   ├── react.svg           # Vite scaffold — not brand
-│   └── vite.svg            # Vite scaffold — not brand
-└── types/
-    └── .gitkeep            # Empty — shared types go here in phase 2
+├── api/                    # apiFetch domain modules (credentials: include)
+│   ├── client.ts
+│   ├── bridge-catalog.ts
+│   ├── platform-account.ts
+│   ├── platform-object-map.ts
+│   ├── client-api.ts, campaign.ts, platform.ts, channel.ts, …
+├── auth/                   # AuthProvider, roles, useAuth
+├── company/                # ActiveCompanyProvider
+├── navigation/
+│   └── navConfig.ts        # sections: workspace | catalog | bridge | admin
+├── routes/
+│   ├── index.tsx
+│   ├── GuestRoute.tsx
+│   ├── RequireRole.tsx
+│   └── RequireMinRole.tsx
+├── pages/
+│   ├── Bridge/             # Vinculação (Superadmin) — see bridge-matching.mdc
+│   │   ├── BridgeTabs.tsx
+│   │   ├── BridgePageShell.tsx
+│   │   ├── AccountMatchingPage.tsx
+│   │   ├── CampaignMatchingPage.tsx
+│   │   ├── AdGroupMatchingPage.tsx
+│   │   ├── AdMatchingPage.tsx
+│   │   ├── ObjectMatchingPage.tsx
+│   │   ├── catalogHelpers.ts
+│   │   └── components/     # CheckboxDataTable, BulkConfirmDialog
+│   ├── Catalog/            # Platforms, Channels, BuyingTypes
+│   ├── Clients/
+│   ├── AdminPanel/
+│   ├── Invites/
+│   ├── Dashboard/, Login/, Home/, Password*/
+│   └── Groupings/          # drawers used from Clients
+├── components/layout/      # DashboardLayout, AppSidebar, …
+├── types/                  # DTO mirrors (bridge.ts, …)
+├── theme/                  # Binder MUI theme (see binder-mui-theme.mdc)
+└── utils/
 ```
 
-### Planned (README phases — NOT created yet)
+## Bridge routes (Superadmin)
 
-Do **not** assume these folders/files exist until they appear in the repo:
+| Path | Page |
+|------|------|
+| `/dashboard/bridge` | redirect → `/dashboard/bridge/accounts` |
+| `/dashboard/bridge/accounts` | `AccountMatchingPage` |
+| `/dashboard/bridge/campaigns` | `CampaignMatchingPage` |
+| `/dashboard/bridge/ad-groups` | `AdGroupMatchingPage` |
+| `/dashboard/bridge/ads` | `AdMatchingPage` |
 
-```
-src/
-├── api/                    # Phase 2: fetch client, credentials: 'include'
-├── auth/                   # Phase 2: session context, guards, hooks
-├── routes/                 # Phase 2: React Router config, protected routes
-├── pages/                  # Phase 3: Login, Dashboard, Companies, Users, Invites
-├── components/             # Phase 3: shared UI (layout, forms, tables)
-├── hooks/                  # Phase 3: shared hooks
-├── assets/brand/           # Brand logos (white/black/color) — when available
-└── theme/
-    ├── tokens.ts           # Planned — see binder-mui-theme.mdc
-    ├── palette.ts
-    ├── typography.ts
-    ├── components.ts
-    ├── ThemeModeProvider.tsx
-    └── index.ts            # getTheme(mode), darkTheme, lightTheme
-```
+Nav: section **Vinculação** (`bridge`) → `/dashboard/bridge` in [`navConfig.ts`](mdc:src/navigation/navConfig.ts). Matching UX conventions: [bridge-matching.mdc](mdc:.cursor/rules/bridge-matching.mdc).
 
-## Provider Stack (current)
+## Provider Stack
 
-```
-main.tsx
-  └── App.tsx
-        ├── QueryClientProvider     # TanStack Query (retry: 1, no refetch on focus)
-        └── ThemeProvider           # MUI theme from @/theme
-              └── CssBaseline
-              └── { children }      # Currently: placeholder Container
-```
-
-When implementing phases, wrap in this order (outer → inner):
-
-`QueryClientProvider` → `ThemeModeProvider` → `ThemeProvider` → `CssBaseline` → `RouterProvider` → layout
+`QueryClientProvider` → `ThemeModeProvider` → `ThemeProvider` → `CssBaseline` → `AuthProvider` → `ActiveCompanyProvider` → `RouterProvider`
 
 ## Environment Variables
 
 | Variable | Purpose | Example |
 |----------|---------|---------|
-| `VITE_API_URL` | Backend base URL (browser calls) | `http://localhost:8090` |
-| `VITE_APP_NAME` | Display name in UI | `Binder App` |
-| `VITE_DEV_PORT` | Vite dev server port | `3000` |
-
-- Copy `.env.example` → `.env.development` for local/Docker dev.
-- Docker prod build passes `VITE_API_URL` and `VITE_APP_NAME` as build args (baked into bundle).
-- Backend CORS expects `FRONTEND_HOST=http://localhost:3000` in dev.
+| `VITE_API_URL` | Backend base URL | `http://localhost:8090` |
+| `VITE_APP_NAME` | Display name | `Binder App` |
+| `VITE_DEV_PORT` | Vite dev port | `3000` |
 
 ## Backend Integration
 
-Sibling project: `../binder_app_backend/`
+Sibling: `../binder_app_backend/`
 
 | Concern | Detail |
 |---------|--------|
-| Auth | JWT in `httpOnly` cookie `access_token` |
-| Fetch | Always `credentials: 'include'` on authenticated requests |
-| Session | `GET /access/users/me` returns profile + active companies |
-| Roles | `Superadmin`, `Editor`, `Viewer` (backend `Role` enum) |
-| Swagger | `http://localhost:8090/api` (dev) |
+| Auth | JWT `httpOnly` cookie `access_token` |
+| Fetch | `credentials: 'include'` via `apiFetch` |
+| Roles | `superadmin`, `editor`, `viewer` |
+| Bridge API | `/bridge/catalog/:platformId`, `/bridge/platform-accounts`, `/bridge/platform-object-maps` (incl. bulk DELETE) |
 
-### Known backend routes (do not invent endpoints)
-
-**Auth** (`/access/auth`):
-
-- `POST /access/auth/login`, `POST /access/auth/logout`
-- `POST /access/auth/password/forgot`, `POST /access/auth/password/reset`
-
-**User** (`/access/users`):
-
-- `GET /access/users/me` — authenticated profile
-- Additional user CRUD routes exist on backend — check `binder_app_backend/src/access/user/` before implementing UI
-
-**Other Access modules** on backend: `access/company/`, `access/invite/`, `access/user-company/` — implement frontend pages only when backend endpoints are confirmed in source.
-
-## Implementation Phases
-
-| Phase | Scope | Status |
-|-------|-------|--------|
-| **1 — Infra** | `fetch` client, auth context, `/access/users/me`, protected routes | Not started |
-| **2 — Core screens** | Login, dashboard, companies, users, invites | Not started |
-| **3 — Public flows** | Accept/decline invite, password reset | Not started |
-| **Theme** | Binder brand tokens, dark default, light toggle | Rule written; code pending |
+Confirm contracts in `binder_app_backend/src/bridge/` — do not invent DTO fields.
 
 ## Conventions
 
-- **Imports**: use `@/` alias (`@/theme`, `@/App`) — not deep relative paths from nested folders.
-- **New feature**: add under `src/<feature>/` with colocated hooks/types; register routes in `src/routes/`.
-- **Shared types**: `src/types/` — mirror backend DTO shapes where needed.
-- **UI components**: `src/components/` — reusable, prop-driven; styling via MUI theme (see [binder-mui-theme.mdc](mdc:.cursor/rules/binder-mui-theme.mdc)).
-- **Pages**: `src/pages/<Name>/` — one folder per screen; thin pages, logic in hooks/services.
+- **Imports**: `@/` alias.
+- **Pages**: `src/pages/<Feature>/`; Bridge matching under `pages/Bridge/`.
+- **API**: one module per resource under `src/api/`; types under `src/types/`.
+- **UI**: MUI + RHF + Zod + TanStack Query (mirror Catalog/Clients patterns).
 - **Do not edit**: `dist/`, `node_modules/`.
-- **Do not create** backend code from the frontend repo — API lives in `binder_app_backend/`.
-
-## Path Alias
-
-Both Vite and TypeScript resolve `@` → `src/`:
-
-```typescript
-import { theme } from '@/theme';
-import App from '@/App';
-```
-
-## Commands
-
-```bash
-npm run dev                              # Dev server http://localhost:3000
-docker compose up                        # Docker dev (npm install + dev)
-cd ../binder_app_backend && docker compose up   # Backend :8090 (separate terminal)
-npm run build                            # Production build → dist/
-npm run lint                             # ESLint + Prettier
-```
+- **Do not create** backend code from this repo.
 
 ## Anti-Hallucination Checklist
 
-Before referencing code, verify it exists:
-
-1. Only `src/main.tsx`, `src/App.tsx`, `src/theme/index.ts`, `src/vite-env.d.ts`, `src/types/.gitkeep` are implemented.
-2. `src/api/`, `src/auth/`, `src/routes/`, `src/pages/`, `src/components/`, `src/hooks/` are **planned**, not present.
-3. React Router is installed but **not configured** — no routes file yet.
-4. react-hook-form + zod are installed but **not used** — forms are phase 3.
-5. Theme is MUI placeholder colors — full Binder theme per `binder-mui-theme.mdc` is pending.
-6. Use backend source (`binder_app_backend/src/`) to confirm API contracts — do not guess DTO fields.
+1. Verify files exist under `src/` before citing them — the app is past the scaffold phase.
+2. Bridge matching UI **exists** (`pages/Bridge/`, bridge APIs, nav section `bridge`).
+3. For Bridge behavior (filters, hierarchy, hard-delete), follow [bridge-matching.mdc](mdc:.cursor/rules/bridge-matching.mdc) and backend domain rules.
+4. Format/SubFormat matching UI is **deferred** until media Format HTTP APIs exist.
+5. Use backend source for API contracts — do not guess.

@@ -1,13 +1,16 @@
 import BusinessIcon from '@mui/icons-material/Business';
+import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined';
 import HomeIcon from '@mui/icons-material/Home';
+import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
 import MailOutlinedIcon from '@mui/icons-material/MailOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
+import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
 import type { SvgIconComponent } from '@mui/icons-material';
 
 import { hasMinRole } from '@/auth/roles';
 import type { Role } from '@/types/user';
 
-export type NavSection = 'workspace' | 'admin';
+export type NavSection = 'workspace' | 'catalog' | 'bridge' | 'admin';
 
 export interface NavItem {
   id: string;
@@ -21,7 +24,9 @@ export interface NavItem {
 
 export const NAV_SECTION_LABELS: Record<NavSection, string> = {
   workspace: 'Área de trabalho',
-  admin: 'Painel do administrador',
+  catalog: 'Catálogo de mídia',
+  bridge: 'Vinculação',
+  admin: 'Administração',
 };
 
 export const NAV_ITEMS: NavItem[] = [
@@ -35,12 +40,28 @@ export const NAV_ITEMS: NavItem[] = [
     end: true,
   },
   {
-    id: 'invites',
-    label: 'Convites',
-    path: '/dashboard/invites',
-    icon: MailOutlinedIcon,
+    id: 'business',
+    label: 'Negócio',
+    path: '/dashboard/clients',
+    icon: StorefrontOutlinedIcon,
     section: 'workspace',
-    minRole: 'editor',
+    minRole: 'superadmin',
+  },
+  {
+    id: 'catalog',
+    label: 'Catálogo',
+    path: '/dashboard/catalog',
+    icon: CategoryOutlinedIcon,
+    section: 'catalog',
+    minRole: 'viewer',
+  },
+  {
+    id: 'bridge',
+    label: 'Vinculação',
+    path: '/dashboard/bridge',
+    icon: LinkOutlinedIcon,
+    section: 'bridge',
+    minRole: 'superadmin',
   },
   {
     id: 'admin-companies',
@@ -57,6 +78,14 @@ export const NAV_ITEMS: NavItem[] = [
     icon: PeopleAltOutlinedIcon,
     section: 'admin',
     minRole: 'superadmin',
+  },
+  {
+    id: 'admin-invites',
+    label: 'Convites',
+    path: '/dashboard/admin/invites',
+    icon: MailOutlinedIcon,
+    section: 'admin',
+    minRole: 'editor',
   },
 ];
 
@@ -78,3 +107,10 @@ export function groupNavItemsBySection(
     {},
   );
 }
+
+export const NAV_SECTION_ORDER: NavSection[] = [
+  'workspace',
+  'catalog',
+  'bridge',
+  'admin',
+];

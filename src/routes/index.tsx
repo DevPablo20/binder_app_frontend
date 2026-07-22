@@ -2,6 +2,14 @@ import { Navigate, createBrowserRouter } from 'react-router-dom';
 
 import { AdminPanelPage } from '@/pages/AdminPanel/AdminPanelPage';
 import { AdminUsersPage } from '@/pages/AdminPanel/AdminUsersPage';
+import { AccountMatchingPage } from '@/pages/Bridge/AccountMatchingPage';
+import { AdGroupMatchingPage } from '@/pages/Bridge/AdGroupMatchingPage';
+import { AdMatchingPage } from '@/pages/Bridge/AdMatchingPage';
+import { CampaignMatchingPage } from '@/pages/Bridge/CampaignMatchingPage';
+import { BuyingTypesPage } from '@/pages/Catalog/BuyingTypesPage';
+import { ChannelsPage } from '@/pages/Catalog/ChannelsPage';
+import { PlatformsPage } from '@/pages/Catalog/PlatformsPage';
+import { ClientsPage } from '@/pages/Clients/ClientsPage';
 import { DashboardPage } from '@/pages/Dashboard/DashboardPage';
 import { HomePage } from '@/pages/Home/HomePage';
 import { AcceptInvitePage } from '@/pages/Invites/AcceptInvitePage';
@@ -52,12 +60,76 @@ export const router = createBrowserRouter([
         element: <DashboardPage />,
       },
       {
-        path: '/dashboard/invites',
+        path: '/dashboard/clients',
         element: (
-          <RequireMinRole minRole="editor">
-            <InvitesPage />
-          </RequireMinRole>
+          <RequireRole role="superadmin">
+            <ClientsPage />
+          </RequireRole>
         ),
+      },
+      {
+        path: '/dashboard/campaigns',
+        element: <Navigate to="/dashboard/clients" replace />,
+      },
+      {
+        path: '/dashboard/groupings',
+        element: <Navigate to="/dashboard/clients" replace />,
+      },
+      {
+        path: '/dashboard/catalog',
+        element: <Navigate to="/dashboard/catalog/platforms" replace />,
+      },
+      {
+        path: '/dashboard/catalog/platforms',
+        element: <PlatformsPage />,
+      },
+      {
+        path: '/dashboard/catalog/channels',
+        element: <ChannelsPage />,
+      },
+      {
+        path: '/dashboard/catalog/buying-types',
+        element: <BuyingTypesPage />,
+      },
+      {
+        path: '/dashboard/bridge',
+        element: <Navigate to="/dashboard/bridge/accounts" replace />,
+      },
+      {
+        path: '/dashboard/bridge/accounts',
+        element: (
+          <RequireRole role="superadmin">
+            <AccountMatchingPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: '/dashboard/bridge/campaigns',
+        element: (
+          <RequireRole role="superadmin">
+            <CampaignMatchingPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: '/dashboard/bridge/ad-groups',
+        element: (
+          <RequireRole role="superadmin">
+            <AdGroupMatchingPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: '/dashboard/bridge/ads',
+        element: (
+          <RequireRole role="superadmin">
+            <AdMatchingPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: '/dashboard/invites',
+        element: <Navigate to="/dashboard/admin/invites" replace />,
       },
       {
         path: '/dashboard/admin',
@@ -77,6 +149,14 @@ export const router = createBrowserRouter([
           <RequireRole role="superadmin">
             <AdminUsersPage />
           </RequireRole>
+        ),
+      },
+      {
+        path: '/dashboard/admin/invites',
+        element: (
+          <RequireMinRole minRole="editor">
+            <InvitesPage />
+          </RequireMinRole>
         ),
       },
     ],

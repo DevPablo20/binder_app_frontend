@@ -12,12 +12,12 @@ import { useState } from 'react';
 
 import { useAuth } from '@/auth/useAuth';
 import { BinderLogo } from '@/components/BinderLogo';
-import { CompanySwitcherSlot } from '@/components/layout/CompanySwitcherSlot';
 import { SidebarAccountStrip } from '@/components/layout/SidebarAccountStrip';
 import { SidebarNavGroup } from '@/components/layout/SidebarNavGroup';
 import { UserOptionsDialog } from '@/components/layout/UserOptionsDialog';
 import {
   NAV_SECTION_LABELS,
+  NAV_SECTION_ORDER,
   getVisibleNavItems,
   groupNavItemsBySection,
 } from '@/navigation/navConfig';
@@ -38,9 +38,9 @@ function SidebarContent({
 }) {
   const { user } = useAuth();
   const navGroups = groupNavItemsBySection(getVisibleNavItems(user?.role));
-  const workspaceItems = navGroups.workspace ?? [];
-  const adminItems = navGroups.admin ?? [];
-  const showDivider = workspaceItems.length > 0 && adminItems.length > 0;
+  const visibleSections = NAV_SECTION_ORDER.filter(
+    (section) => (navGroups[section]?.length ?? 0) > 0,
+  );
 
   return (
     <Box
@@ -80,26 +80,20 @@ function SidebarContent({
         )}
       </Box>
 
-      <CompanySwitcherSlot />
-
       <Box
         sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}
       >
-        <SidebarNavGroup
-          title={NAV_SECTION_LABELS.workspace}
-          items={workspaceItems}
-          expanded={expanded}
-          onItemClick={onNavClick}
-        />
-
-        {showDivider && <Divider sx={{ mx: 1, my: 0.5 }} />}
-
-        <SidebarNavGroup
-          title={NAV_SECTION_LABELS.admin}
-          items={adminItems}
-          expanded={expanded}
-          onItemClick={onNavClick}
-        />
+        {visibleSections.map((section, index) => (
+          <Box key={section}>
+            {index > 0 && <Divider sx={{ mx: 1, my: 0.5 }} />}
+            <SidebarNavGroup
+              title={NAV_SECTION_LABELS[section]}
+              items={navGroups[section] ?? []}
+              expanded={expanded}
+              onItemClick={onNavClick}
+            />
+          </Box>
+        ))}
       </Box>
 
       <SidebarAccountStrip expanded={expanded} onClick={onUserClick} />
@@ -110,23 +104,30 @@ function SidebarContent({
 export function AppSidebar() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
-  const [open, setOpen] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [userDialogOpen, setUserDialogOpen] = useState(false);
 
+  const open = pinned || hovered;
+
   const handleToggle = () => {
-    setOpen((prev) => !prev);
+    setPinned((prev) => !prev);
   };
 
-  const handleClose = () => {
-    setOpen(false);
+  const handleMobileClose = () => {
+    setMobileOpen(false);
   };
 
-  const drawerWidth = open ? DRAWER_WIDTH_EXPANDED : DRAWER_WIDTH_COLLAPSED;
+  // Reserve collapsed width unless pinned so hover expand overlays content.
+  const layoutWidth = pinned ? DRAWER_WIDTH_EXPANDED : DRAWER_WIDTH_COLLAPSED;
+  const paperWidth = open ? DRAWER_WIDTH_EXPANDED : DRAWER_WIDTH_COLLAPSED;
 
   const drawerPaperSx = {
-    width: drawerWidth,
+    width: paperWidth,
     boxSizing: 'border-box',
     overflowX: 'hidden',
+    zIndex: hovered && !pinned ? theme.zIndex.drawer + 1 : undefined,
     transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.enteringScreen,
@@ -138,8 +139,14 @@ export function AppSidebar() {
       <>
         <Drawer
           variant="permanent"
+          slotProps={{
+            paper: {
+              onMouseEnter: () => setHovered(true),
+              onMouseLeave: () => setHovered(false),
+            },
+          }}
           sx={{
-            width: drawerWidth,
+            width: layoutWidth,
             flexShrink: 0,
             '& .MuiDrawer-paper': drawerPaperSx,
           }}
@@ -174,15 +181,15 @@ export function AppSidebar() {
       >
         <SidebarContent
           expanded={false}
-          onMenuClick={() => setOpen(true)}
+          onMenuClick={() => setMobileOpen(true)}
           onUserClick={() => setUserDialogOpen(true)}
         />
       </Drawer>
 
       <Drawer
         variant="temporary"
-        open={open}
-        onClose={handleClose}
+        open={mobileOpen}
+        onClose={handleMobileClose}
         ModalProps={{ keepMounted: true }}
         sx={{
           '& .MuiDrawer-paper': {
@@ -193,10 +200,10 @@ export function AppSidebar() {
       >
         <SidebarContent
           expanded
-          onMenuClick={handleClose}
-          onNavClick={handleClose}
+          onMenuClick={handleMobileClose}
+          onNavClick={handleMobileClose}
           onUserClick={() => {
-            handleClose();
+            handleMobileClose();
             setUserDialogOpen(true);
           }}
         />
