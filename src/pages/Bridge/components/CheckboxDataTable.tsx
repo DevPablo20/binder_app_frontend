@@ -1,5 +1,6 @@
 import {
   Checkbox,
+  Radio,
   Table,
   TableBody,
   TableCell,
@@ -23,6 +24,7 @@ interface CheckboxDataTableProps<T> {
   selectedIds: Set<string>;
   onToggle: (id: string) => void;
   onToggleAll: (ids: string[]) => void;
+  selectionMode?: 'multiple' | 'single';
   isRowDisabled?: (row: T) => boolean;
   emptyMessage?: string;
 }
@@ -34,15 +36,20 @@ export function CheckboxDataTable<T>({
   selectedIds,
   onToggle,
   onToggleAll,
+  selectionMode = 'multiple',
   isRowDisabled,
   emptyMessage = 'Nenhum item encontrado.',
 }: CheckboxDataTableProps<T>) {
+  const isSingle = selectionMode === 'single';
   const enabledIds = rows
     .filter((row) => !isRowDisabled?.(row))
     .map((row) => getRowId(row));
   const allSelected =
-    enabledIds.length > 0 && enabledIds.every((id) => selectedIds.has(id));
-  const someSelected = enabledIds.some((id) => selectedIds.has(id));
+    !isSingle &&
+    enabledIds.length > 0 &&
+    enabledIds.every((id) => selectedIds.has(id));
+  const someSelected =
+    !isSingle && enabledIds.some((id) => selectedIds.has(id));
 
   if (rows.length === 0) {
     return (
@@ -58,12 +65,14 @@ export function CheckboxDataTable<T>({
         <TableHead>
           <TableRow>
             <TableCell padding="checkbox">
-              <Checkbox
-                indeterminate={someSelected && !allSelected}
-                checked={allSelected}
-                onChange={() => onToggleAll(enabledIds)}
-                disabled={enabledIds.length === 0}
-              />
+              {!isSingle && (
+                <Checkbox
+                  indeterminate={someSelected && !allSelected}
+                  checked={allSelected}
+                  onChange={() => onToggleAll(enabledIds)}
+                  disabled={enabledIds.length === 0}
+                />
+              )}
             </TableCell>
             {columns.map((column) => (
               <TableCell key={column.id}>{column.header}</TableCell>
@@ -74,11 +83,12 @@ export function CheckboxDataTable<T>({
           {rows.map((row) => {
             const id = getRowId(row);
             const disabled = isRowDisabled?.(row) ?? false;
+            const selected = selectedIds.has(id);
             return (
               <TableRow
                 key={id}
                 hover
-                selected={selectedIds.has(id)}
+                selected={selected}
                 onClick={() => {
                   if (!disabled) onToggle(id);
                 }}
@@ -91,11 +101,19 @@ export function CheckboxDataTable<T>({
                   padding="checkbox"
                   onClick={(event) => event.stopPropagation()}
                 >
-                  <Checkbox
-                    checked={selectedIds.has(id)}
-                    disabled={disabled}
-                    onChange={() => onToggle(id)}
-                  />
+                  {isSingle ? (
+                    <Radio
+                      checked={selected}
+                      disabled={disabled}
+                      onChange={() => onToggle(id)}
+                    />
+                  ) : (
+                    <Checkbox
+                      checked={selected}
+                      disabled={disabled}
+                      onChange={() => onToggle(id)}
+                    />
+                  )}
                 </TableCell>
                 {columns.map((column) => (
                   <TableCell key={column.id}>{column.render(row)}</TableCell>

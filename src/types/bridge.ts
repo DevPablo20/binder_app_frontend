@@ -30,7 +30,9 @@ export interface PlatformAccountSummary {
   name: string;
   isActive: boolean;
   clientId: string;
+  clientName: string;
   platformId: string;
+  platformName: string;
 }
 
 export interface PlatformAccountDetail extends PlatformAccountSummary {
@@ -43,6 +45,16 @@ export interface CreatePlatformAccountPayload {
   name: string;
   clientId: string;
   platformId: string;
+  isActive?: boolean;
+}
+
+export interface BulkCreatePlatformAccountsPayload {
+  platformId: string;
+  accounts: Array<{
+    externalAccountId: string;
+    name: string;
+  }>;
+  clientIds: string[];
   isActive?: boolean;
 }
 

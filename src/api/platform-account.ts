@@ -1,5 +1,6 @@
 import { apiFetch } from '@/api/client';
 import type {
+  BulkCreatePlatformAccountsPayload,
   BulkDeleteIdsPayload,
   BulkUpdatePlatformAccountsPayload,
   CreatePlatformAccountPayload,
@@ -35,6 +36,15 @@ export function createPlatformAccount(
   body: CreatePlatformAccountPayload,
 ): Promise<PlatformAccountDetail> {
   return apiFetch<PlatformAccountDetail>('/bridge/platform-accounts', {
+    method: 'POST',
+    body,
+  });
+}
+
+export function createPlatformAccountsBulk(
+  body: BulkCreatePlatformAccountsPayload,
+): Promise<PlatformAccountDetail[]> {
+  return apiFetch<PlatformAccountDetail[]>('/bridge/platform-accounts/bulk', {
     method: 'POST',
     body,
   });
