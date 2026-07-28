@@ -39,6 +39,7 @@ binder_app_frontend/
 src/
 ├── api/                    # apiFetch domain modules (credentials: include)
 │   ├── client.ts
+│   ├── analytics.ts        # GET /analytics/metrics
 │   ├── bridge-catalog.ts
 │   ├── platform-account.ts
 │   ├── platform-object-map.ts
@@ -67,7 +68,8 @@ src/
 │   ├── Clients/
 │   ├── AdminPanel/
 │   ├── Invites/
-│   ├── Dashboard/, Login/, Home/, Password*/
+│   ├── Dashboard/          # Início — analytics filters, KPIs, series, breakdown
+│   ├── Login/, Home/, Password*/
 │   └── Groupings/          # drawers used from Clients
 ├── components/layout/      # DashboardLayout, AppSidebar, …
 ├── types/                  # DTO mirrors (bridge.ts, …)
@@ -116,7 +118,7 @@ Confirm contracts in `binder_app_backend/src/bridge/` — do not invent DTO fiel
 
 - **Imports**: `@/` alias.
 - **Pages**: `src/pages/<Feature>/`; Bridge matching under `pages/Bridge/`.
-- **API**: one module per resource under `src/api/`; types under `src/types/`.
+- **API**: one module per resource under `src/api/` (incl. `analytics.ts`); types under `src/types/`.
 - **UI**: MUI + RHF + Zod + TanStack Query (mirror Catalog/Clients patterns).
 - **Do not edit**: `dist/`, `node_modules/`.
 - **Do not create** backend code from this repo.
