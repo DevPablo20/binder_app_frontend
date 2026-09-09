@@ -23,6 +23,7 @@ export interface MetricBlock {
   cpvc: number | null;
   cpe: number | null;
   ctr: number | null;
+  vtr: number | null;
   vtrc: number | null;
   er: number | null;
 }
@@ -47,4 +48,19 @@ export interface AnalyticsMetricsQuery {
   from?: string;
   to?: string;
   groupBy?: AnalyticsGroupBy;
+}
+
+export interface AnalyticsChatMessage {
+  role: 'user' | 'model';
+  content: string;
+}
+
+export interface AnalyticsChatRequest {
+  message: string;
+  history?: AnalyticsChatMessage[];
+  context?: AnalyticsMetricsQuery;
+}
+
+export interface AnalyticsChatResponse {
+  reply: string;
 }

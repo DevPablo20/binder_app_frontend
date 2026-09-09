@@ -1,9 +1,11 @@
 import {
   Alert,
   Box,
+  Checkbox,
   Container,
   FormControl,
   InputLabel,
+  ListItemText,
   MenuItem,
   Paper,
   Select,
@@ -18,7 +20,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { type MouseEvent, useEffect, useMemo, useState } from 'react';
 
 import { getAnalyticsMetrics } from '@/api/analytics';
 import { getBuyingTypes } from '@/api/buying-type';
@@ -30,6 +32,7 @@ import { getPlatforms } from '@/api/platform';
 import { getSubGroupings } from '@/api/sub-grouping';
 import { useAuth } from '@/auth/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { InsightsChatDrawer } from '@/pages/Dashboard/InsightsChatDrawer';
 import type { AnalyticsGroupBy, MetricBlock } from '@/types/analytics';
 import { getErrorMessage } from '@/utils/errors';
 
@@ -44,14 +47,21 @@ const GROUP_BY_OPTIONS: { value: AnalyticsGroupBy; label: string }[] = [
   { value: 'date', label: 'Data' },
 ];
 
+function formatDateInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function isoDaysAgo(days: number): string {
   const d = new Date();
-  d.setUTCDate(d.getUTCDate() - days);
-  return d.toISOString().slice(0, 10);
+  d.setDate(d.getDate() - days);
+  return formatDateInput(d);
 }
 
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return formatDateInput(new Date());
 }
 
 function formatNumber(value: number | null | undefined, digits = 0): string {
@@ -60,6 +70,11 @@ function formatNumber(value: number | null | undefined, digits = 0): string {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
+}
+
+function formatCurrency(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—';
+  return `R$ ${formatNumber(value, 2)}`;
 }
 
 function formatRate(value: number | null | undefined): string {
@@ -89,34 +104,255 @@ function resolveAutoGroupBy(filters: {
   return 'company';
 }
 
-function SeriesChart({ series }: { series: MetricBlock[] }) {
-  const width = 800;
-  const height = 240;
-  const pad = { top: 16, right: 16, bottom: 32, left: 48 };
+type ChartMetricKey =
+  | 'impressions'
+  | 'cost'
+  | 'clicks'
+  | 'videoViews'
+  | 'videoViews100p'
+  | 'engagement'
+  | 'cpm'
+  | 'cpc'
+  | 'cpvc'
+  | 'cpe'
+  | 'vtr'
+  | 'vtrc'
+  | 'ctr'
+  | 'er';
+
+type MetricDisplayDef = {
+  key: ChartMetricKey;
+  label: string;
+  color: string;
+  format: (value: number | null | undefined) => string;
+};
+
+const METRIC_DEFS: MetricDisplayDef[] = [
+  {
+    key: 'impressions',
+    label: 'Impressões',
+    color: '#27A59E',
+    format: (value) => formatNumber(value),
+  },
+  {
+    key: 'cost',
+    label: 'Investimento',
+    color: '#F36B20',
+    format: (value) => formatCurrency(value),
+  },
+  {
+    key: 'clicks',
+    label: 'Cliques',
+    color: '#61BE6B',
+    format: (value) => formatNumber(value),
+  },
+  {
+    key: 'videoViews',
+    label: 'Visualizações',
+    color: '#B388FF',
+    format: (value) => formatNumber(value),
+  },
+  {
+    key: 'videoViews100p',
+    label: 'Visualizações 100%',
+    color: '#64B5F6',
+    format: (value) => formatNumber(value),
+  },
+  {
+    key: 'engagement',
+    label: 'Engajamentos',
+    color: '#FFB74D',
+    format: (value) => formatNumber(value),
+  },
+  {
+    key: 'cpm',
+    label: 'CPM',
+    color: '#EF5350',
+    format: (value) => formatCurrency(value),
+  },
+  {
+    key: 'cpc',
+    label: 'CPC',
+    color: '#EC407A',
+    format: (value) => formatCurrency(value),
+  },
+  {
+    key: 'cpvc',
+    label: 'CPVc',
+    color: '#AB47BC',
+    format: (value) => formatCurrency(value),
+  },
+  {
+    key: 'cpe',
+    label: 'CPE',
+    color: '#7E57C2',
+    format: (value) => formatCurrency(value),
+  },
+  {
+    key: 'vtr',
+    label: 'VTR',
+    color: '#5C6BC0',
+    format: (value) => formatRate(value),
+  },
+  {
+    key: 'vtrc',
+    label: 'VTRc',
+    color: '#29B6F6',
+    format: (value) => formatRate(value),
+  },
+  {
+    key: 'ctr',
+    label: 'CTR',
+    color: '#26C6DA',
+    format: (value) => formatRate(value),
+  },
+  {
+    key: 'er',
+    label: 'ER',
+    color: '#9CCC65',
+    format: (value) => formatRate(value),
+  },
+];
+
+const METRIC_DEF_MAP = Object.fromEntries(
+  METRIC_DEFS.map((metric) => [metric.key, metric]),
+) as Record<ChartMetricKey, MetricDisplayDef>;
+
+const PRIMARY_METRICS: ChartMetricKey[] = [
+  'impressions',
+  'cost',
+  'clicks',
+  'videoViews',
+  'videoViews100p',
+  'engagement',
+];
+
+const COST_METRICS: ChartMetricKey[] = ['cpm', 'cpc', 'cpvc', 'cpe'];
+const REACH_METRICS: ChartMetricKey[] = ['vtr', 'vtrc', 'ctr', 'er'];
+
+const MAX_CHART_METRICS = 2;
+
+function maxForMetric(series: MetricBlock[], key: ChartMetricKey): number {
+  let max = 0;
+  for (const point of series) {
+    max = Math.max(max, point[key] ?? 0);
+  }
+  return max || 0;
+}
+
+/** Round a range into a clean 1/2/5 * 10^n step. */
+function niceStep(range: number, round: boolean): number {
+  if (!Number.isFinite(range) || range <= 0) return 1;
+  const exponent = Math.floor(Math.log10(range));
+  const fraction = range / 10 ** exponent;
+  let niceFraction: number;
+  if (round) {
+    if (fraction < 1.5) niceFraction = 1;
+    else if (fraction < 3) niceFraction = 2;
+    else if (fraction < 7) niceFraction = 5;
+    else niceFraction = 10;
+  } else if (fraction <= 1) niceFraction = 1;
+  else if (fraction <= 2) niceFraction = 2;
+  else if (fraction <= 5) niceFraction = 5;
+  else niceFraction = 10;
+  return niceFraction * 10 ** exponent;
+}
+
+/** Build a constant Y scale with round ticks (e.g. 0, 1M, 2M… / 0, 5k, 10k…). */
+function niceScale(
+  rawMax: number,
+  desiredTicks = 5,
+): { max: number; ticks: number[] } {
+  if (!Number.isFinite(rawMax) || rawMax <= 0) {
+    return { max: 1, ticks: [0, 0.25, 0.5, 0.75, 1] };
+  }
+  const step = niceStep(rawMax / (desiredTicks - 1), true);
+  const max = Math.ceil(rawMax / step) * step;
+  const ticks: number[] = [];
+  for (let value = 0; value <= max + step * 1e-9; value += step) {
+    ticks.push(Number(value.toPrecision(12)));
+  }
+  return { max, ticks };
+}
+
+function SeriesChart({
+  series,
+  selectedMetrics,
+}: {
+  series: MetricBlock[];
+  selectedMetrics: ChartMetricKey[];
+}) {
+  const width = 900;
+  const height = 280;
+  const pad = { top: 20, right: 72, bottom: 32, left: 72 };
   const innerW = width - pad.left - pad.right;
   const innerH = height - pad.top - pad.bottom;
+  const activeMetrics = selectedMetrics
+    .slice(0, MAX_CHART_METRICS)
+    .map((key) => METRIC_DEF_MAP[key])
+    .filter(Boolean);
+  const leftMetric = activeMetrics[0];
+  const rightMetric = activeMetrics[1];
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  const maxVal = useMemo(() => {
-    let max = 0;
-    for (const point of series) {
-      max = Math.max(max, point.impressions, point.cost, point.clicks);
-    }
-    return max || 1;
+  const leftScale = useMemo(
+    () => niceScale(leftMetric ? maxForMetric(series, leftMetric.key) : 0),
+    [leftMetric, series],
+  );
+  const rightScale = useMemo(
+    () => niceScale(rightMetric ? maxForMetric(series, rightMetric.key) : 0),
+    [rightMetric, series],
+  );
+
+  const dateTicks = useMemo(() => {
+    if (series.length <= 1) return series;
+    const tickCount = Math.min(series.length, 6);
+    return Array.from({ length: tickCount }, (_, index) => {
+      const pointIndex = Math.round(
+        (index * (series.length - 1)) / (tickCount - 1),
+      );
+      return series[pointIndex];
+    });
   }, [series]);
 
-  const pathFor = (key: 'impressions' | 'cost' | 'clicks') => {
-    if (series.length === 0) return '';
-    return series
+  const pointX = (index: number) =>
+    pad.left +
+    (series.length === 1 ? innerW / 2 : (index / (series.length - 1)) * innerW);
+
+  const pointY = (point: MetricBlock, key: ChartMetricKey, maxVal: number) => {
+    const rawValue = point[key] ?? 0;
+    return pad.top + innerH - (rawValue / maxVal) * innerH;
+  };
+
+  const pathFor = (key: ChartMetricKey, maxVal: number) =>
+    series
       .map((point, index) => {
-        const x =
-          pad.left +
-          (series.length === 1
-            ? innerW / 2
-            : (index / (series.length - 1)) * innerW);
-        const y = pad.top + innerH - (point[key] / maxVal) * innerH;
+        const x = pointX(index);
+        const y = pointY(point, key, maxVal);
         return `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
       })
       .join(' ');
+
+  const hoveredPoint =
+    hoveredIndex === null
+      ? null
+      : series[Math.min(hoveredIndex, series.length - 1)];
+  const hoveredX =
+    hoveredIndex === null ? null : pointX(hoveredIndex);
+
+  const handleMouseMove = (event: MouseEvent<SVGSVGElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const relativeX = ((event.clientX - rect.left) / rect.width) * width;
+    const clampedX = Math.min(
+      Math.max(relativeX, pad.left),
+      pad.left + innerW,
+    );
+    const nextIndex = series.reduce((nearestIndex, _point, index) => {
+      const currentDistance = Math.abs(pointX(index) - clampedX);
+      const nearestDistance = Math.abs(pointX(nearestIndex) - clampedX);
+      return currentDistance < nearestDistance ? index : nearestIndex;
+    }, 0);
+    setHoveredIndex(nextIndex);
   };
 
   return (
@@ -126,7 +362,9 @@ function SeriesChart({ series }: { series: MetricBlock[] }) {
         width="100%"
         height={height}
         role="img"
-        aria-label="Série diária de impressões, custo e clicks"
+        aria-label="Série diária das métricas selecionadas"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoveredIndex(null)}
       >
         <line
           x1={pad.left}
@@ -140,39 +378,220 @@ function SeriesChart({ series }: { series: MetricBlock[] }) {
           y1={pad.top}
           x2={pad.left}
           y2={pad.top + innerH}
-          stroke="#EDEDED"
+          stroke={leftMetric?.color ?? '#EDEDED'}
         />
-        <path
-          d={pathFor('impressions')}
-          fill="none"
-          stroke="#27A59E"
-          strokeWidth={2}
-        />
-        <path d={pathFor('cost')} fill="none" stroke="#F36B20" strokeWidth={2} />
-        <path
-          d={pathFor('clicks')}
-          fill="none"
-          stroke="#61BE6B"
-          strokeWidth={2}
-        />
-        {series.length > 0 && (
-          <text x={pad.left} y={height - 8} fill="#757575" fontSize={11}>
-            {series[0]?.date} → {series[series.length - 1]?.date}
-          </text>
+        {rightMetric && (
+          <line
+            x1={pad.left + innerW}
+            y1={pad.top}
+            x2={pad.left + innerW}
+            y2={pad.top + innerH}
+            stroke={rightMetric.color}
+          />
         )}
+
+        {leftScale.ticks.map((tickValue) => {
+          const y = pad.top + innerH - (tickValue / leftScale.max) * innerH;
+          return (
+            <g key={`left-tick-${tickValue}`}>
+              <line
+                x1={pad.left}
+                y1={y}
+                x2={pad.left + innerW}
+                y2={y}
+                stroke="#2A2A2A"
+                strokeDasharray="3 4"
+              />
+              {leftMetric && (
+                <text
+                  x={pad.left - 8}
+                  y={y + 3}
+                  fill={leftMetric.color}
+                  fontSize={10}
+                  textAnchor="end"
+                >
+                  {leftMetric.format(tickValue)}
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        {rightMetric &&
+          rightScale.ticks.map((tickValue) => {
+            const y = pad.top + innerH - (tickValue / rightScale.max) * innerH;
+            return (
+              <text
+                key={`right-tick-${tickValue}`}
+                x={pad.left + innerW + 8}
+                y={y + 3}
+                fill={rightMetric.color}
+                fontSize={10}
+                textAnchor="start"
+              >
+                {rightMetric.format(tickValue)}
+              </text>
+            );
+          })}
+
+        {leftMetric && (
+          <path
+            d={pathFor(leftMetric.key, leftScale.max)}
+            fill="none"
+            stroke={leftMetric.color}
+            strokeWidth={2}
+          />
+        )}
+        {rightMetric && (
+          <path
+            d={pathFor(rightMetric.key, rightScale.max)}
+            fill="none"
+            stroke={rightMetric.color}
+            strokeWidth={2}
+          />
+        )}
+
+        {hoveredPoint && hoveredX !== null && (
+          <line
+            x1={hoveredX}
+            y1={pad.top}
+            x2={hoveredX}
+            y2={pad.top + innerH}
+            stroke="#8C8C8C"
+            strokeDasharray="4 4"
+          />
+        )}
+        {hoveredPoint && hoveredX !== null && leftMetric && (
+          <circle
+            cx={hoveredX}
+            cy={pointY(hoveredPoint, leftMetric.key, leftScale.max)}
+            r={4}
+            fill={leftMetric.color}
+          />
+        )}
+        {hoveredPoint && hoveredX !== null && rightMetric && (
+          <circle
+            cx={hoveredX}
+            cy={pointY(hoveredPoint, rightMetric.key, rightScale.max)}
+            r={4}
+            fill={rightMetric.color}
+          />
+        )}
+
+        {dateTicks.map((point, index) => {
+          const pointIndex = series.findIndex(
+            (entry) => entry.date === point.date,
+          );
+          const x = pointX(pointIndex);
+          return (
+            <g key={`${point.date}-${index}`}>
+              <line
+                x1={x}
+                y1={pad.top + innerH}
+                x2={x}
+                y2={pad.top + innerH + 4}
+                stroke="#757575"
+              />
+              <text
+                x={x}
+                y={height - 8}
+                fill="#757575"
+                fontSize={11}
+                textAnchor="middle"
+              >
+                {point.date}
+              </text>
+            </g>
+          );
+        })}
       </svg>
-      <Stack direction="row" spacing={2} sx={{ px: 1, pb: 1 }}>
-        <Typography variant="caption" sx={{ color: '#27A59E' }}>
-          Impressões
-        </Typography>
-        <Typography variant="caption" sx={{ color: '#F36B20' }}>
-          Custo
-        </Typography>
-        <Typography variant="caption" sx={{ color: '#61BE6B' }}>
-          Clicks
-        </Typography>
+      <Stack
+        direction="row"
+        spacing={2}
+        useFlexGap
+        sx={{ px: 1, pb: 1, flexWrap: 'wrap' }}
+      >
+        {leftMetric && (
+          <Typography variant="caption" sx={{ color: leftMetric.color }}>
+            {leftMetric.label} (eixo esquerdo)
+          </Typography>
+        )}
+        {rightMetric && (
+          <Typography variant="caption" sx={{ color: rightMetric.color }}>
+            {rightMetric.label} (eixo direito)
+          </Typography>
+        )}
       </Stack>
+      {hoveredPoint && (
+        <Paper variant="outlined" sx={{ mt: 1, p: 1.5 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            {hoveredPoint.date?.replaceAll('-', '/')}
+          </Typography>
+          <Stack
+            direction="row"
+            spacing={2}
+            useFlexGap
+            sx={{ flexWrap: 'wrap' }}
+          >
+            {activeMetrics.map((metric) => (
+              <Typography key={`tooltip-${metric.key}`} variant="body2">
+                <Box component="span" sx={{ color: metric.color }}>
+                  {metric.label}:
+                </Box>{' '}
+                {metric.format(hoveredPoint[metric.key] ?? null)}
+              </Typography>
+            ))}
+          </Stack>
+        </Paper>
+      )}
     </Box>
+  );
+}
+
+function MetricSection({
+  title,
+  metrics,
+  totals,
+  isLoading,
+  minCardWidth,
+}: {
+  title: string;
+  metrics: ChartMetricKey[];
+  totals: MetricBlock | undefined;
+  isLoading: boolean;
+  minCardWidth: number;
+}) {
+  return (
+    <Paper variant="outlined" sx={{ p: 2 }}>
+      <Stack spacing={2}>
+        <Typography variant="subtitle1">{title}</Typography>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(auto-fit, minmax(${minCardWidth}px, 1fr))`,
+            gap: 2,
+          }}
+        >
+          {metrics.map((metricKey) => {
+            const metric = METRIC_DEF_MAP[metricKey];
+            return (
+              <Paper
+                key={metric.key}
+                variant="outlined"
+                sx={{ p: 2, minWidth: 0, bgcolor: 'background.paper' }}
+              >
+                <Typography variant="caption" color="text.secondary">
+                  {metric.label}
+                </Typography>
+                <Typography variant="h6">
+                  {isLoading ? '…' : metric.format(totals?.[metric.key] ?? null)}
+                </Typography>
+              </Paper>
+            );
+          })}
+        </Box>
+      </Stack>
+    </Paper>
   );
 }
 
@@ -189,9 +608,11 @@ export function DashboardPage() {
   const [subGroupingId, setSubGroupingId] = useState('');
   const [from, setFrom] = useState(() => isoDaysAgo(29));
   const [to, setTo] = useState(() => todayIso());
-  const [groupByOverride, setGroupByOverride] = useState<AnalyticsGroupBy | ''>(
-    '',
-  );
+  const [groupByOverride, setGroupByOverride] = useState<AnalyticsGroupBy | ''>('');
+  const [selectedChartMetrics, setSelectedChartMetrics] = useState<ChartMetricKey[]>([
+    'impressions',
+    'cost',
+  ]);
 
   useEffect(() => {
     if (!companyId && companies.length === 1) {
@@ -275,9 +696,7 @@ export function DashboardPage() {
   );
   const filteredBuyingTypes = useMemo(
     () =>
-      buyingTypes.filter(
-        (bt) => !channelId || channelBuyingTypeIds.has(bt.id),
-      ),
+      buyingTypes.filter((bt) => !channelId || channelBuyingTypeIds.has(bt.id)),
     [buyingTypes, channelId, channelBuyingTypeIds],
   );
 
@@ -325,8 +744,8 @@ export function DashboardPage() {
   return (
     <DashboardLayout>
       <Container
-        maxWidth="xl"
-        sx={{ py: { xs: 3, sm: 4 }, px: { xs: 2, sm: 3 } }}
+        maxWidth={false}
+        sx={{ py: { xs: 3, sm: 4 }, px: { xs: 2, sm: 3 }, width: '100%' }}
       >
         <Stack spacing={3}>
           <Box>
@@ -340,13 +759,14 @@ export function DashboardPage() {
           </Box>
 
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Stack
-              direction={{ xs: 'column', md: 'row' }}
-              spacing={2}
-              useFlexGap
-              flexWrap="wrap"
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gap: 2,
+              }}
             >
-              <FormControl size="small" sx={{ minWidth: 160 }}>
+              <FormControl size="small" fullWidth>
                 <InputLabel id="filter-company">Empresa</InputLabel>
                 <Select
                   labelId="filter-company"
@@ -373,7 +793,7 @@ export function DashboardPage() {
 
               <FormControl
                 size="small"
-                sx={{ minWidth: 160 }}
+                fullWidth
                 disabled={!companyId && companies.length !== 1}
               >
                 <InputLabel id="filter-client">Cliente</InputLabel>
@@ -399,11 +819,7 @@ export function DashboardPage() {
                 </Select>
               </FormControl>
 
-              <FormControl
-                size="small"
-                sx={{ minWidth: 180 }}
-                disabled={!clientId}
-              >
+              <FormControl size="small" fullWidth disabled={!clientId}>
                 <InputLabel id="filter-campaign">Campanha</InputLabel>
                 <Select
                   labelId="filter-campaign"
@@ -426,7 +842,7 @@ export function DashboardPage() {
                 </Select>
               </FormControl>
 
-              <FormControl size="small" sx={{ minWidth: 150 }}>
+              <FormControl size="small" fullWidth>
                 <InputLabel id="filter-platform">Plataforma</InputLabel>
                 <Select
                   labelId="filter-platform"
@@ -450,11 +866,7 @@ export function DashboardPage() {
                 </Select>
               </FormControl>
 
-              <FormControl
-                size="small"
-                sx={{ minWidth: 150 }}
-                disabled={!platformId}
-              >
+              <FormControl size="small" fullWidth disabled={!platformId}>
                 <InputLabel id="filter-channel">Canal</InputLabel>
                 <Select
                   labelId="filter-channel"
@@ -477,11 +889,7 @@ export function DashboardPage() {
                 </Select>
               </FormControl>
 
-              <FormControl
-                size="small"
-                sx={{ minWidth: 150 }}
-                disabled={!channelId}
-              >
+              <FormControl size="small" fullWidth disabled={!channelId}>
                 <InputLabel id="filter-buying">Tipo de compra</InputLabel>
                 <Select
                   labelId="filter-buying"
@@ -503,11 +911,7 @@ export function DashboardPage() {
                 </Select>
               </FormControl>
 
-              <FormControl
-                size="small"
-                sx={{ minWidth: 170 }}
-                disabled={!campaignId}
-              >
+              <FormControl size="small" fullWidth disabled={!campaignId}>
                 <InputLabel id="filter-sg">Sub-agrupamento</InputLabel>
                 <Select
                   labelId="filter-sg"
@@ -536,7 +940,7 @@ export function DashboardPage() {
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
                 slotProps={{ inputLabel: { shrink: true } }}
-                sx={{ minWidth: 150 }}
+                fullWidth
               />
               <TextField
                 size="small"
@@ -545,10 +949,10 @@ export function DashboardPage() {
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
                 slotProps={{ inputLabel: { shrink: true } }}
-                sx={{ minWidth: 150 }}
+                fullWidth
               />
 
-              <FormControl size="small" sx={{ minWidth: 180 }}>
+              <FormControl size="small" fullWidth>
                 <InputLabel id="filter-groupby">Granularidade</InputLabel>
                 <Select
                   labelId="filter-groupby"
@@ -568,7 +972,7 @@ export function DashboardPage() {
                   ))}
                 </Select>
               </FormControl>
-            </Stack>
+            </Box>
           </Paper>
 
           {isError && (
@@ -577,90 +981,93 @@ export function DashboardPage() {
             </Alert>
           )}
 
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={2}
-            useFlexGap
-            flexWrap="wrap"
-          >
-            {[
-              { label: 'Impressões', value: formatNumber(totals?.impressions) },
-              { label: 'Custo', value: formatNumber(totals?.cost, 2) },
-              { label: 'Clicks', value: formatNumber(totals?.clicks) },
-              {
-                label: 'Video views',
-                value: formatNumber(totals?.videoViews),
-              },
-              {
-                label: 'Views 100%',
-                value: formatNumber(totals?.videoViews100p),
-              },
-              {
-                label: 'Engagement',
-                value: formatNumber(totals?.engagement),
-              },
-            ].map((kpi) => (
-              <Paper
-                key={kpi.label}
-                variant="outlined"
-                sx={{ p: 2, minWidth: 140, flex: '1 1 140px' }}
-              >
-                <Typography variant="caption" color="text.secondary">
-                  {kpi.label}
-                </Typography>
-                <Typography variant="h6">
-                  {isLoading ? '…' : kpi.value}
-                </Typography>
-              </Paper>
-            ))}
-          </Stack>
+          <MetricSection
+            title="Métricas primárias"
+            metrics={PRIMARY_METRICS}
+            totals={totals}
+            isLoading={isLoading}
+            minCardWidth={180}
+          />
 
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={2}
-            useFlexGap
-            flexWrap="wrap"
-          >
-            {[
-              { label: 'CPM', value: formatNumber(totals?.cpm, 2) },
-              { label: 'CPC', value: formatNumber(totals?.cpc, 2) },
-              { label: 'CPVC', value: formatNumber(totals?.cpvc, 2) },
-              { label: 'CPE', value: formatNumber(totals?.cpe, 2) },
-              { label: 'CTR', value: formatRate(totals?.ctr) },
-              { label: 'VTRC', value: formatRate(totals?.vtrc) },
-              { label: 'ER', value: formatRate(totals?.er) },
-            ].map((rate) => (
-              <Paper
-                key={rate.label}
-                variant="outlined"
-                sx={{
-                  px: 2,
-                  py: 1.5,
-                  minWidth: 110,
-                  flex: '1 1 110px',
-                  bgcolor: 'action.hover',
-                }}
-              >
-                <Typography variant="caption" color="text.secondary">
-                  {rate.label}
-                </Typography>
-                <Typography variant="subtitle1">
-                  {isLoading ? '…' : rate.value}
-                </Typography>
-              </Paper>
-            ))}
-          </Stack>
+          <MetricSection
+            title="Métricas de Custo"
+            metrics={COST_METRICS}
+            totals={totals}
+            isLoading={isLoading}
+            minCardWidth={160}
+          />
+
+          <MetricSection
+            title="Métricas de Alcance"
+            metrics={REACH_METRICS}
+            totals={totals}
+            isLoading={isLoading}
+            minCardWidth={160}
+          />
 
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              Série diária
-            </Typography>
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={2}
+              sx={{
+                mb: 2,
+                alignItems: { xs: 'stretch', md: 'center' },
+                justifyContent: 'space-between',
+              }}
+            >
+              <Box>
+                <Typography variant="subtitle1">Série diária</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Selecione até 2 métricas. A primeira usa o eixo Y esquerdo e a
+                  segunda o eixo Y direito.
+                </Typography>
+              </Box>
+              <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 320 } }}>
+                <InputLabel id="chart-metrics">Métricas do gráfico</InputLabel>
+                <Select
+                  multiple
+                  labelId="chart-metrics"
+                  label="Métricas do gráfico"
+                  value={selectedChartMetrics}
+                  renderValue={(selected) =>
+                    (selected as ChartMetricKey[])
+                      .map((key) => METRIC_DEF_MAP[key].label)
+                      .join(', ')
+                  }
+                  onChange={(e) => {
+                    const value = e.target.value as ChartMetricKey[];
+                    if (value.length === 0) return;
+                    setSelectedChartMetrics(value.slice(0, MAX_CHART_METRICS));
+                  }}
+                >
+                  {METRIC_DEFS.map((metric) => {
+                    const isSelected = selectedChartMetrics.includes(metric.key);
+                    const atLimit =
+                      selectedChartMetrics.length >= MAX_CHART_METRICS &&
+                      !isSelected;
+                    return (
+                      <MenuItem
+                        key={metric.key}
+                        value={metric.key}
+                        disabled={atLimit}
+                      >
+                        <Checkbox checked={isSelected} />
+                        <ListItemText primary={metric.label} />
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+              </FormControl>
+            </Stack>
             {series.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
                 {isLoading ? 'Carregando…' : 'Sem pontos no período.'}
               </Typography>
             ) : (
-              <SeriesChart series={series} />
+              <SeriesChart
+                series={series}
+                selectedMetrics={selectedChartMetrics}
+              />
             )}
           </Paper>
 
@@ -679,13 +1086,17 @@ export function DashboardPage() {
                     <TableRow>
                       <TableCell>Dimensão</TableCell>
                       <TableCell align="right">Impressões</TableCell>
-                      <TableCell align="right">Custo</TableCell>
-                      <TableCell align="right">Clicks</TableCell>
-                      <TableCell align="right">Views</TableCell>
+                      <TableCell align="right">Investimento</TableCell>
+                      <TableCell align="right">Cliques</TableCell>
+                      <TableCell align="right">Visualizações</TableCell>
                       <TableCell align="right">Views 100%</TableCell>
-                      <TableCell align="right">Engagement</TableCell>
+                      <TableCell align="right">Engajamentos</TableCell>
                       <TableCell align="right">CPM</TableCell>
                       <TableCell align="right">CPC</TableCell>
+                      <TableCell align="right">CPVc</TableCell>
+                      <TableCell align="right">CPE</TableCell>
+                      <TableCell align="right">VTR</TableCell>
+                      <TableCell align="right">VTRc</TableCell>
                       <TableCell align="right">CTR</TableCell>
                       <TableCell align="right">ER</TableCell>
                     </TableRow>
@@ -693,7 +1104,7 @@ export function DashboardPage() {
                   <TableBody>
                     {breakdown.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={11}>
+                        <TableCell colSpan={15}>
                           {isLoading
                             ? 'Carregando…'
                             : 'Nenhum dado para o recorte atual.'}
@@ -707,7 +1118,7 @@ export function DashboardPage() {
                           {formatNumber(row.impressions)}
                         </TableCell>
                         <TableCell align="right">
-                          {formatNumber(row.cost, 2)}
+                          {formatCurrency(row.cost)}
                         </TableCell>
                         <TableCell align="right">
                           {formatNumber(row.clicks)}
@@ -721,18 +1132,14 @@ export function DashboardPage() {
                         <TableCell align="right">
                           {formatNumber(row.engagement)}
                         </TableCell>
-                        <TableCell align="right">
-                          {formatNumber(row.cpm, 2)}
-                        </TableCell>
-                        <TableCell align="right">
-                          {formatNumber(row.cpc, 2)}
-                        </TableCell>
-                        <TableCell align="right">
-                          {formatRate(row.ctr)}
-                        </TableCell>
-                        <TableCell align="right">
-                          {formatRate(row.er)}
-                        </TableCell>
+                        <TableCell align="right">{formatCurrency(row.cpm)}</TableCell>
+                        <TableCell align="right">{formatCurrency(row.cpc)}</TableCell>
+                        <TableCell align="right">{formatCurrency(row.cpvc)}</TableCell>
+                        <TableCell align="right">{formatCurrency(row.cpe)}</TableCell>
+                        <TableCell align="right">{formatRate(row.vtr)}</TableCell>
+                        <TableCell align="right">{formatRate(row.vtrc)}</TableCell>
+                        <TableCell align="right">{formatRate(row.ctr)}</TableCell>
+                        <TableCell align="right">{formatRate(row.er)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -742,6 +1149,7 @@ export function DashboardPage() {
           )}
         </Stack>
       </Container>
+      <InsightsChatDrawer context={metricsQuery} />
     </DashboardLayout>
   );
 }

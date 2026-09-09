@@ -1,5 +1,7 @@
 import { apiFetch } from '@/api/client';
 import type {
+  AnalyticsChatRequest,
+  AnalyticsChatResponse,
   AnalyticsMetricsQuery,
   AnalyticsMetricsResponse,
 } from '@/types/analytics';
@@ -20,4 +22,13 @@ export function getAnalyticsMetrics(
   return apiFetch<AnalyticsMetricsResponse>(
     `/analytics/metrics${toQuery(query)}`,
   );
+}
+
+export function postAnalyticsChat(
+  body: AnalyticsChatRequest,
+): Promise<AnalyticsChatResponse> {
+  return apiFetch<AnalyticsChatResponse>('/analytics/chat', {
+    method: 'POST',
+    body,
+  });
 }
