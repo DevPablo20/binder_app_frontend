@@ -127,7 +127,7 @@ export function AppSidebar() {
     width: paperWidth,
     boxSizing: 'border-box',
     overflowX: 'hidden',
-    zIndex: hovered && !pinned ? theme.zIndex.drawer + 1 : undefined,
+    zIndex: hovered && !pinned ? theme.zIndex.drawer + 1 : theme.zIndex.drawer,
     transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.enteringScreen,
