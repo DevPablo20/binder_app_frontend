@@ -1,11 +1,6 @@
----
-description: Application tech stack, dependency versions, and version-specific best practices
-alwaysApply: true
----
-
 # Tech Stack
 
-Vite 8 + React 19 SPA with MUI, TanStack Query, and React Router. Consumes `binder_app_backend` NestJS API. See [project-structure.mdc](mdc:.cursor/rules/project-structure.mdc) for layout; [binder-mui-theme.mdc](mdc:.cursor/rules/binder-mui-theme.mdc) for brand theming.
+Vite 8 + React 19 SPA with MUI, TanStack Query, and React Router. Consumes `binder_app_backend` NestJS API. See [project-structure.mdc](project-structure.md) for layout; [binder-mui-theme.mdc](mui-theme.md) for brand theming.
 
 ## Runtime
 
@@ -54,7 +49,7 @@ import.meta.env.VITE_API_URL
 
 - Keep `@mui/material` and `@mui/icons-material` on the **same major** (9.x).
 - Theme via `createTheme` in `src/theme/` — wrap app with `ThemeProvider` + `CssBaseline`.
-- **Do not** add CSS files, `styled()` wrappers, or hardcoded HEX in components — follow [binder-mui-theme.mdc](mdc:.cursor/rules/binder-mui-theme.mdc).
+- **Do not** add CSS files, `styled()` wrappers, or hardcoded HEX in components — follow [binder-mui-theme.mdc](mui-theme.md).
 - Prefer MUI props (`color`, `variant`) over `sx`; when using `sx`, reference palette keys (`background.paper`, `text.secondary`).
 - Use `@mui/icons-material` for icons — do not import random icon libraries unless approved.
 
@@ -135,7 +130,7 @@ import.meta.env.VITE_API_URL
 2. **Do not add** axios, Redux, MobX, Tailwind, or styled-components unless explicitly requested.
 3. **Do not add** alternative UI libraries (Chakra, Ant Design) — MUI is the standard.
 4. **Prefer existing stack**: fetch → HTTP; TanStack Query → server state; react-hook-form + zod → forms; MUI → UI.
-5. Brand/theme changes go in `src/theme/` per [binder-mui-theme.mdc](mdc:.cursor/rules/binder-mui-theme.mdc) — not in components or env.
+5. Brand/theme changes go in `src/theme/` per [binder-mui-theme.mdc](mui-theme.md) — not in components or env.
 6. After adding dependencies, run `npm install` and verify `npm run build` + `npm run lint` pass.
 
 ## Quick Reference

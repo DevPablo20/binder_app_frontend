@@ -1,8 +1,3 @@
----
-description: Binder brand theme, dark/light MUI tokens, typography, and styling conventions
-alwaysApply: true
----
-
 # Binder MUI Theme
 
 Admin panel frontend (`binder_app_frontend`). Brand source: Binder identity guide (PPT). Default theme: **dark**, with **light** mode and user toggle.
