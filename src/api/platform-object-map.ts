@@ -1,5 +1,6 @@
 import { apiFetch } from '@/api/client';
 import type {
+  BulkCreatePlatformObjectMapsPayload,
   BulkDeleteIdsPayload,
   BulkUpdatePlatformObjectMapsPayload,
   CreatePlatformObjectMapPayload,
@@ -13,6 +14,7 @@ function buildQuery(params: PlatformObjectMapQuery): string {
   if (params.platformAccountId) {
     search.set('platformAccountId', params.platformAccountId);
   }
+  if (params.platformId) search.set('platformId', params.platformId);
   if (params.campaignId) search.set('campaignId', params.campaignId);
   if (params.objectType) search.set('objectType', params.objectType);
   if (params.isActive !== undefined) {
@@ -37,6 +39,18 @@ export function createPlatformObjectMap(
     method: 'POST',
     body,
   });
+}
+
+export function createPlatformObjectMapsBulk(
+  body: BulkCreatePlatformObjectMapsPayload,
+): Promise<PlatformObjectMapDetail[]> {
+  return apiFetch<PlatformObjectMapDetail[]>(
+    '/bridge/platform-object-maps/bulk',
+    {
+      method: 'POST',
+      body,
+    },
+  );
 }
 
 export function updatePlatformObjectMaps(

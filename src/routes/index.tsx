@@ -5,6 +5,7 @@ import { AdminUsersPage } from '@/pages/AdminPanel/AdminUsersPage';
 import { AccountMatchingPage } from '@/pages/Bridge/AccountMatchingPage';
 import { AdGroupMatchingPage } from '@/pages/Bridge/AdGroupMatchingPage';
 import { AdMatchingPage } from '@/pages/Bridge/AdMatchingPage';
+import { BridgeHubPage } from '@/pages/Bridge/BridgeHubPage';
 import { CampaignMatchingPage } from '@/pages/Bridge/CampaignMatchingPage';
 import { BuyingTypesPage } from '@/pages/Catalog/BuyingTypesPage';
 import { ChannelsPage } from '@/pages/Catalog/ChannelsPage';
@@ -93,7 +94,11 @@ export const router = createBrowserRouter([
       },
       {
         path: '/dashboard/bridge',
-        element: <Navigate to="/dashboard/bridge/accounts" replace />,
+        element: (
+          <RequireRole role="superadmin">
+            <BridgeHubPage />
+          </RequireRole>
+        ),
       },
       {
         path: '/dashboard/bridge/accounts',

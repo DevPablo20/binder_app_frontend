@@ -8,6 +8,7 @@ import {
   MenuItem,
   Select,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -16,38 +17,55 @@ import { useMemo, useState } from 'react';
 import { getCatalog } from '@/api/bridge-catalog';
 import { getClients } from '@/api/client-api';
 import {
-  createPlatformAccount,
+  createPlatformAccountsBulk,
   deletePlatformAccounts,
   getPlatformAccounts,
-  updatePlatformAccounts,
 } from '@/api/platform-account';
 import { getPlatforms } from '@/api/platform';
 import { BridgePageShell } from '@/pages/Bridge/BridgePageShell';
 import { toggleAllInSet, toggleIdInSet } from '@/pages/Bridge/catalogHelpers';
+import { AssociateAccountsDialog } from '@/pages/Bridge/components/AssociateAccountsDialog';
 import { BulkConfirmDialog } from '@/pages/Bridge/components/BulkConfirmDialog';
 import { CheckboxDataTable } from '@/pages/Bridge/components/CheckboxDataTable';
-import type { CatalogItem, PlatformAccountSummary } from '@/types/bridge';
 import { getErrorMessage } from '@/utils/errors';
 
+interface LinkedAccountGroup {
+  externalAccountId: string;
+  accountName: string;
+  platformName: string;
+  clients: Array<{ id: string; name: string; platformAccountId: string }>;
+  platformAccountIds: string[];
+}
+
 type ConfirmAction =
-  | { type: 'associate' }
-  | { type: 'remove' }
-  | { type: 'changeClient'; newClientId: string }
+  | { type: 'unmatchSingle'; ids: string[] }
+  | { type: 'unmatchMulti'; ids: string[]; externalAccountId: string }
   | null;
+
+function matchesNameSearch(name: string, search: string): boolean {
+  if (!search.trim()) return true;
+  return name.toLowerCase().includes(search.trim().toLowerCase());
+}
 
 export function AccountMatchingPage() {
   const queryClient = useQueryClient();
-  const [clientId, setClientId] = useState('');
   const [platformId, setPlatformId] = useState('');
+  const [nameSearch, setNameSearch] = useState('');
   const [availableSelected, setAvailableSelected] = useState<Set<string>>(
     new Set(),
   );
-  const [linkedSelected, setLinkedSelected] = useState<Set<string>>(new Set());
-  const [changeClientId, setChangeClientId] = useState('');
+  const [singleClientSelected, setSingleClientSelected] = useState<Set<string>>(
+    new Set(),
+  );
+  const [multiClientSelected, setMultiClientSelected] = useState<Set<string>>(
+    new Set(),
+  );
+  const [associateOpen, setAssociateOpen] = useState(false);
+  const [associateClientIds, setAssociateClientIds] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<ConfirmAction>(null);
   const [apiError, setApiError] = useState<string | null>(null);
 
-  const targetsReady = Boolean(clientId && platformId);
+  const targetsReady = Boolean(platformId);
 
   const { data: platforms = [] } = useQuery({
     queryKey: ['platforms'],
@@ -58,6 +76,10 @@ export function AccountMatchingPage() {
     queryKey: ['clients'],
     queryFn: getClients,
   });
+
+  const selectedPlatform = platforms.find(
+    (platform) => platform.id === platformId,
+  );
 
   const availableQuery = useQuery({
     queryKey: ['bridge-catalog', platformId, 'account', true],
@@ -70,22 +92,81 @@ export function AccountMatchingPage() {
   });
 
   const linkedQuery = useQuery({
-    queryKey: ['platform-accounts', clientId, platformId],
-    queryFn: () =>
-      getPlatformAccounts({ clientId, platformId }),
+    queryKey: ['platform-accounts', platformId],
+    queryFn: () => getPlatformAccounts({ platformId }),
     enabled: targetsReady,
   });
 
-  const availableItems = availableQuery.data ?? [];
-  const linkedAccounts = linkedQuery.data ?? [];
+  const linkedGroups = useMemo(() => {
+    const rows = linkedQuery.data ?? [];
+    const byExternal = new Map<string, LinkedAccountGroup>();
 
-  const availableByExternalId = useMemo(() => {
-    const map = new Map<string, CatalogItem>();
-    for (const item of availableItems) {
-      map.set(item.accountId, item);
+    for (const row of rows) {
+      const existing = byExternal.get(row.externalAccountId);
+      if (existing) {
+        existing.clients.push({
+          id: row.clientId,
+          name: row.clientName,
+          platformAccountId: row.id,
+        });
+        existing.platformAccountIds.push(row.id);
+        continue;
+      }
+      byExternal.set(row.externalAccountId, {
+        externalAccountId: row.externalAccountId,
+        accountName: row.name,
+        platformName: row.platformName,
+        clients: [
+          {
+            id: row.clientId,
+            name: row.clientName,
+            platformAccountId: row.id,
+          },
+        ],
+        platformAccountIds: [row.id],
+      });
     }
-    return map;
-  }, [availableItems]);
+
+    return [...byExternal.values()].sort((a, b) =>
+      a.accountName.localeCompare(b.accountName),
+    );
+  }, [linkedQuery.data]);
+
+  const singleClientGroups = useMemo(
+    () =>
+      linkedGroups.filter(
+        (group) =>
+          group.clients.length === 1 &&
+          matchesNameSearch(group.accountName, nameSearch),
+      ),
+    [linkedGroups, nameSearch],
+  );
+
+  const multiClientGroups = useMemo(
+    () =>
+      linkedGroups.filter(
+        (group) =>
+          group.clients.length > 1 &&
+          matchesNameSearch(group.accountName, nameSearch),
+      ),
+    [linkedGroups, nameSearch],
+  );
+
+  const availableItems = useMemo(() => {
+    const platformName = selectedPlatform?.name ?? '';
+    return (availableQuery.data ?? [])
+      .filter((item) => matchesNameSearch(item.accountName, nameSearch))
+      .map((item) => ({
+        ...item,
+        platformName: platformName || item.platform,
+      }));
+  }, [availableQuery.data, nameSearch, selectedPlatform?.name]);
+
+  const selectedAvailableAccounts = useMemo(
+    () =>
+      availableItems.filter((item) => availableSelected.has(item.accountId)),
+    [availableItems, availableSelected],
+  );
 
   const invalidate = async () => {
     await Promise.all([
@@ -93,113 +174,67 @@ export function AccountMatchingPage() {
       queryClient.invalidateQueries({ queryKey: ['platform-accounts'] }),
     ]);
     setAvailableSelected(new Set());
-    setLinkedSelected(new Set());
+    setSingleClientSelected(new Set());
+    setMultiClientSelected(new Set());
   };
 
   const associateMutation = useMutation({
-    mutationFn: async () => {
-      const selected = [...availableSelected];
-      await Promise.all(
-        selected.map((externalAccountId) => {
-          const item = availableByExternalId.get(externalAccountId);
-          if (!item) {
-            throw new Error('Conta ETL não encontrada na seleção');
-          }
-          return createPlatformAccount({
-            externalAccountId,
-            name: item.accountName,
-            clientId,
-            platformId,
-          });
-        }),
-      );
-    },
+    mutationFn: () =>
+      createPlatformAccountsBulk({
+        platformId,
+        clientIds: associateClientIds,
+        accounts: selectedAvailableAccounts.map((item) => ({
+          externalAccountId: item.accountId,
+          name: item.accountName,
+        })),
+      }),
     onSuccess: async () => {
-      setConfirm(null);
+      setAssociateOpen(false);
+      setAssociateClientIds([]);
       setApiError(null);
       await invalidate();
     },
     onError: (err) => {
       setApiError(getErrorMessage(err, 'Erro ao associar contas.'));
-      setConfirm(null);
     },
   });
 
-  const removeMutation = useMutation({
-    mutationFn: () =>
-      deletePlatformAccounts({ ids: [...linkedSelected] }),
+  const unmatchMutation = useMutation({
+    mutationFn: (ids: string[]) => deletePlatformAccounts({ ids }),
     onSuccess: async () => {
       setConfirm(null);
       setApiError(null);
       await invalidate();
     },
     onError: (err) => {
-      setApiError(getErrorMessage(err, 'Erro ao remover contas.'));
+      setApiError(getErrorMessage(err, 'Erro ao desvincular contas.'));
       setConfirm(null);
     },
   });
 
-  const changeClientMutation = useMutation({
-    mutationFn: (newClientId: string) =>
-      updatePlatformAccounts({
-        platformAccounts: [...linkedSelected].map((id) => ({
-          id,
-          clientId: newClientId,
-        })),
-      }),
-    onSuccess: async () => {
-      setConfirm(null);
-      setChangeClientId('');
-      setApiError(null);
-      await invalidate();
-    },
-    onError: (err) => {
-      setApiError(getErrorMessage(err, 'Erro ao alterar cliente.'));
-      setConfirm(null);
-    },
-  });
-
-  const isBusy =
-    associateMutation.isPending ||
-    removeMutation.isPending ||
-    changeClientMutation.isPending;
-
-  const handleConfirm = () => {
-    if (!confirm) return;
-    if (confirm.type === 'associate') associateMutation.mutate();
-    if (confirm.type === 'remove') removeMutation.mutate();
-    if (confirm.type === 'changeClient') {
-      changeClientMutation.mutate(confirm.newClientId);
-    }
-  };
+  const isBusy = associateMutation.isPending || unmatchMutation.isPending;
 
   const confirmCopy = (() => {
     if (!confirm) return { title: '', description: '' };
-    if (confirm.type === 'associate') {
+    if (confirm.type === 'unmatchSingle') {
       return {
-        title: 'Associar contas',
-        description: `Associar ${availableSelected.size} conta(s) ETL ao cliente selecionado?`,
+        title: 'Desvincular contas',
+        description: `Remover ${confirm.ids.length} associação(ões)? Os mapeamentos filhos dessas contas serão excluídos.`,
       };
     }
-    if (confirm.type === 'remove') {
-      return {
-        title: 'Remover associações',
-        description: `Remover ${linkedSelected.size} conta(s)? Todos os mapeamentos de campanha, ad group e anúncio vinculados serão excluídos permanentemente.`,
-      };
-    }
-    const clientName =
-      clients.find((client) => client.id === confirm.newClientId)?.name ??
-      'cliente selecionado';
     return {
-      title: 'Alterar cliente',
-      description: `Mover ${linkedSelected.size} conta(s) para "${clientName}"? Todos os mapeamentos filhos dessas contas serão excluídos permanentemente.`,
+      title: 'Desvincular todos os clientes',
+      description: `Remover todas as associações da conta ETL ${confirm.externalAccountId} nesta plataforma? Os mapeamentos filhos de todos os clientes serão excluídos.`,
     };
   })();
+
+  const isLoading =
+    targetsReady && (availableQuery.isLoading || linkedQuery.isLoading);
 
   return (
     <BridgePageShell
       title="Vinculação de contas"
-      description="Selecione o cliente e a plataforma, depois associe contas ETL ainda sem vínculo (pool global). Uma conta só pode pertencer a um cliente."
+      description="Selecione a plataforma ETL, revise vínculos existentes e associe contas ainda sem vínculo. Uma conta pode pertencer a um ou mais clientes."
     >
       <Stack spacing={3}>
         <Stack
@@ -207,28 +242,6 @@ export function AccountMatchingPage() {
           spacing={2}
           sx={{ alignItems: { md: 'center' } }}
         >
-          <FormControl sx={{ minWidth: 220 }} size="small">
-            <InputLabel id="account-client-label">Cliente</InputLabel>
-            <Select
-              labelId="account-client-label"
-              label="Cliente"
-              value={clientId}
-              onChange={(event) => {
-                setClientId(event.target.value);
-                setAvailableSelected(new Set());
-                setLinkedSelected(new Set());
-              }}
-            >
-              {clients
-                .filter((client) => client.isActive)
-                .map((client) => (
-                  <MenuItem key={client.id} value={client.id}>
-                    {client.name}
-                  </MenuItem>
-                ))}
-            </Select>
-          </FormControl>
-
           <FormControl sx={{ minWidth: 220 }} size="small">
             <InputLabel id="account-platform-label">Plataforma</InputLabel>
             <Select
@@ -238,7 +251,10 @@ export function AccountMatchingPage() {
               onChange={(event) => {
                 setPlatformId(event.target.value);
                 setAvailableSelected(new Set());
-                setLinkedSelected(new Set());
+                setSingleClientSelected(new Set());
+                setMultiClientSelected(new Set());
+                setNameSearch('');
+                setApiError(null);
               }}
             >
               {platforms
@@ -250,17 +266,26 @@ export function AccountMatchingPage() {
                 ))}
             </Select>
           </FormControl>
+
+          <TextField
+            size="small"
+            label="Buscar por nome da conta"
+            value={nameSearch}
+            onChange={(event) => setNameSearch(event.target.value)}
+            disabled={!targetsReady}
+            sx={{ minWidth: 260, flex: 1 }}
+          />
         </Stack>
 
         {!targetsReady && (
           <Alert severity="info">
-            Selecione cliente e plataforma para carregar as contas.
+            Selecione a plataforma para carregar as contas.
           </Alert>
         )}
 
         {apiError && <Alert severity="error">{apiError}</Alert>}
 
-        {targetsReady && (availableQuery.isLoading || linkedQuery.isLoading) && (
+        {isLoading && (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
           </Box>
@@ -284,167 +309,241 @@ export function AccountMatchingPage() {
           </Alert>
         )}
 
-        {targetsReady &&
-          !availableQuery.isLoading &&
-          !linkedQuery.isLoading && (
-            <>
-              <Box>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={2}
-                  sx={{
-                    mb: 1,
-                    alignItems: { sm: 'center' },
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Typography variant="h6">Disponíveis (ETL)</Typography>
-                  <Button
-                    variant="contained"
-                    disabled={availableSelected.size === 0 || isBusy}
-                    onClick={() => setConfirm({ type: 'associate' })}
-                  >
-                    Associar selecionados ({availableSelected.size})
-                  </Button>
-                </Stack>
-                <CheckboxDataTable
-                  rows={availableItems}
-                  getRowId={(row) => row.accountId}
-                  selectedIds={availableSelected}
-                  onToggle={(id) =>
-                    setAvailableSelected((prev) => toggleIdInSet(prev, id))
-                  }
-                  onToggleAll={(ids) =>
-                    setAvailableSelected((prev) => toggleAllInSet(prev, ids))
-                  }
-                  columns={[
-                    {
-                      id: 'externalId',
-                      header: 'ID externo',
-                      render: (row) => row.accountId,
-                    },
-                    {
-                      id: 'name',
-                      header: 'Nome',
-                      render: (row) => row.accountName,
-                    },
-                  ]}
-                  emptyMessage="Nenhuma conta ETL disponível (todas já estão vinculadas)."
-                />
-              </Box>
+        {targetsReady && !isLoading && (
+          <>
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Vinculados
+              </Typography>
 
-              <Box>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={2}
-                  sx={{
-                    mb: 1,
-                    alignItems: { sm: 'center' },
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <Typography variant="h6">
-                    Vinculados a este cliente
-                  </Typography>
-                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
-                    <FormControl size="small" sx={{ minWidth: 180 }}>
-                      <InputLabel id="change-client-label">
-                        Novo cliente
-                      </InputLabel>
-                      <Select
-                        labelId="change-client-label"
-                        label="Novo cliente"
-                        value={changeClientId}
-                        onChange={(event) =>
-                          setChangeClientId(event.target.value)
-                        }
-                        disabled={linkedSelected.size === 0 || isBusy}
-                      >
-                        {clients
-                          .filter(
-                            (client) =>
-                              client.isActive && client.id !== clientId,
-                          )
-                          .map((client) => (
-                            <MenuItem key={client.id} value={client.id}>
-                              {client.name}
-                            </MenuItem>
-                          ))}
-                      </Select>
-                    </FormControl>
-                    <Button
-                      variant="outlined"
-                      disabled={
-                        linkedSelected.size === 0 ||
-                        !changeClientId ||
-                        isBusy
-                      }
-                      onClick={() =>
-                        setConfirm({
-                          type: 'changeClient',
-                          newClientId: changeClientId,
-                        })
-                      }
-                    >
-                      Alterar cliente
-                    </Button>
+              <Stack spacing={3}>
+                <Box>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={2}
+                    sx={{
+                      mb: 1,
+                      alignItems: { sm: 'center' },
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Typography variant="subtitle1">
+                      Um cliente apenas
+                    </Typography>
                     <Button
                       variant="outlined"
                       color="error"
-                      disabled={linkedSelected.size === 0 || isBusy}
-                      onClick={() => setConfirm({ type: 'remove' })}
+                      disabled={singleClientSelected.size === 0 || isBusy}
+                      onClick={() =>
+                        setConfirm({
+                          type: 'unmatchSingle',
+                          ids: [...singleClientSelected],
+                        })
+                      }
                     >
-                      Remover ({linkedSelected.size})
+                      Desvincular ({singleClientSelected.size})
                     </Button>
                   </Stack>
-                </Stack>
-                <CheckboxDataTable
-                  rows={linkedAccounts}
-                  getRowId={(row: PlatformAccountSummary) => row.id}
-                  selectedIds={linkedSelected}
-                  onToggle={(id) =>
-                    setLinkedSelected((prev) => toggleIdInSet(prev, id))
-                  }
-                  onToggleAll={(ids) =>
-                    setLinkedSelected((prev) => toggleAllInSet(prev, ids))
-                  }
-                  columns={[
-                    {
-                      id: 'externalId',
-                      header: 'ID externo',
-                      render: (row) => row.externalAccountId,
-                    },
-                    {
-                      id: 'name',
-                      header: 'Nome',
-                      render: (row) => row.name,
-                    },
-                  ]}
-                  emptyMessage="Nenhuma conta vinculada a este cliente nesta plataforma."
-                />
-              </Box>
-            </>
-          )}
+                  <CheckboxDataTable
+                    rows={singleClientGroups}
+                    getRowId={(row) => row.platformAccountIds[0]}
+                    selectedIds={singleClientSelected}
+                    onToggle={(id) =>
+                      setSingleClientSelected((prev) => toggleIdInSet(prev, id))
+                    }
+                    onToggleAll={(ids) =>
+                      setSingleClientSelected((prev) =>
+                        toggleAllInSet(prev, ids),
+                      )
+                    }
+                    columns={[
+                      {
+                        id: 'platformName',
+                        header: 'Plataforma',
+                        render: (row) => row.platformName,
+                      },
+                      {
+                        id: 'accountId',
+                        header: 'ID da conta',
+                        render: (row) => row.externalAccountId,
+                      },
+                      {
+                        id: 'accountName',
+                        header: 'Nome da conta',
+                        render: (row) => row.accountName,
+                      },
+                      {
+                        id: 'clients',
+                        header: 'Clientes',
+                        render: (row) =>
+                          row.clients.map((client) => client.name).join(', '),
+                      },
+                    ]}
+                    emptyMessage="Nenhuma conta vinculada a exatamente um cliente."
+                  />
+                </Box>
+
+                <Box>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={2}
+                    sx={{
+                      mb: 1,
+                      alignItems: { sm: 'center' },
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Typography variant="subtitle1">
+                      Dois ou mais clientes
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      disabled={multiClientSelected.size !== 1 || isBusy}
+                      onClick={() => {
+                        const externalAccountId = [...multiClientSelected][0];
+                        const group = multiClientGroups.find(
+                          (item) =>
+                            item.externalAccountId === externalAccountId,
+                        );
+                        if (!group) return;
+                        setConfirm({
+                          type: 'unmatchMulti',
+                          ids: group.platformAccountIds,
+                          externalAccountId: group.externalAccountId,
+                        });
+                      }}
+                    >
+                      Desvincular todos os clientes
+                    </Button>
+                  </Stack>
+                  <CheckboxDataTable
+                    selectionMode="single"
+                    rows={multiClientGroups}
+                    getRowId={(row) => row.externalAccountId}
+                    selectedIds={multiClientSelected}
+                    onToggle={(id) =>
+                      setMultiClientSelected((prev) => {
+                        if (prev.has(id)) return new Set();
+                        return new Set([id]);
+                      })
+                    }
+                    onToggleAll={() => undefined}
+                    columns={[
+                      {
+                        id: 'platformName',
+                        header: 'Plataforma',
+                        render: (row) => row.platformName,
+                      },
+                      {
+                        id: 'accountId',
+                        header: 'ID da conta',
+                        render: (row) => row.externalAccountId,
+                      },
+                      {
+                        id: 'accountName',
+                        header: 'Nome da conta',
+                        render: (row) => row.accountName,
+                      },
+                      {
+                        id: 'clients',
+                        header: 'Clientes',
+                        render: (row) =>
+                          row.clients.map((client) => client.name).join(', '),
+                      },
+                    ]}
+                    emptyMessage="Nenhuma conta vinculada a mais de um cliente."
+                  />
+                </Box>
+              </Stack>
+            </Box>
+
+            <Box>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={2}
+                sx={{
+                  mb: 1,
+                  alignItems: { sm: 'center' },
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Typography variant="h6">Disponíveis (ETL)</Typography>
+                <Button
+                  variant="contained"
+                  disabled={availableSelected.size === 0 || isBusy}
+                  onClick={() => {
+                    setAssociateClientIds([]);
+                    setAssociateOpen(true);
+                  }}
+                >
+                  Criar associação ({availableSelected.size})
+                </Button>
+              </Stack>
+              <CheckboxDataTable
+                rows={availableItems}
+                getRowId={(row) => row.accountId}
+                selectedIds={availableSelected}
+                onToggle={(id) =>
+                  setAvailableSelected((prev) => toggleIdInSet(prev, id))
+                }
+                onToggleAll={(ids) =>
+                  setAvailableSelected((prev) => toggleAllInSet(prev, ids))
+                }
+                columns={[
+                  {
+                    id: 'platformName',
+                    header: 'Plataforma',
+                    render: (row) => row.platformName,
+                  },
+                  {
+                    id: 'accountId',
+                    header: 'ID da conta',
+                    render: (row) => row.accountId,
+                  },
+                  {
+                    id: 'accountName',
+                    header: 'Nome da conta',
+                    render: (row) => row.accountName,
+                  },
+                ]}
+                emptyMessage="Nenhuma conta ETL disponível (todas já estão vinculadas)."
+              />
+            </Box>
+          </>
+        )}
       </Stack>
+
+      <AssociateAccountsDialog
+        open={associateOpen}
+        accounts={selectedAvailableAccounts.map((item) => ({
+          externalAccountId: item.accountId,
+          accountName: item.accountName,
+        }))}
+        clients={clients}
+        selectedClientIds={associateClientIds}
+        onSelectedClientIdsChange={setAssociateClientIds}
+        loading={associateMutation.isPending}
+        onCancel={() => {
+          if (associateMutation.isPending) return;
+          setAssociateOpen(false);
+          setAssociateClientIds([]);
+        }}
+        onConfirm={() => associateMutation.mutate()}
+      />
 
       <BulkConfirmDialog
         open={confirm !== null}
         title={confirmCopy.title}
         description={confirmCopy.description}
-        confirmLabel={
-          confirm?.type === 'remove' || confirm?.type === 'changeClient'
-            ? 'Excluir e continuar'
-            : 'Associar'
-        }
-        confirmColor={
-          confirm?.type === 'remove' || confirm?.type === 'changeClient'
-            ? 'error'
-            : 'primary'
-        }
-        loading={isBusy}
+        confirmLabel="Desvincular"
+        confirmColor="error"
+        loading={unmatchMutation.isPending}
         onCancel={() => setConfirm(null)}
-        onConfirm={handleConfirm}
+        onConfirm={() => {
+          if (!confirm) return;
+          unmatchMutation.mutate(confirm.ids);
+        }}
       />
     </BridgePageShell>
   );

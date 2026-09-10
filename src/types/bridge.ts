@@ -30,7 +30,9 @@ export interface PlatformAccountSummary {
   name: string;
   isActive: boolean;
   clientId: string;
+  clientName: string;
   platformId: string;
+  platformName: string;
 }
 
 export interface PlatformAccountDetail extends PlatformAccountSummary {
@@ -43,6 +45,16 @@ export interface CreatePlatformAccountPayload {
   name: string;
   clientId: string;
   platformId: string;
+  isActive?: boolean;
+}
+
+export interface BulkCreatePlatformAccountsPayload {
+  platformId: string;
+  accounts: Array<{
+    externalAccountId: string;
+    name: string;
+  }>;
+  clientIds: string[];
   isActive?: boolean;
 }
 
@@ -74,9 +86,18 @@ export interface PlatformObjectMapSummary {
   externalName?: string | null;
   isActive: boolean;
   platformAccountId: string;
+  externalAccountId: string;
+  accountName: string;
+  platformId: string;
+  platformName: string;
+  clientId: string;
+  clientName: string;
   campaignId: string;
+  campaignName: string;
   channelId?: string | null;
+  channelName?: string | null;
   buyingTypeId?: string | null;
+  buyingTypeName?: string | null;
   formatId?: string | null;
   subFormatId?: string | null;
   subGroupingIds: string[];
@@ -101,8 +122,25 @@ export interface CreatePlatformObjectMapPayload {
   isActive?: boolean;
 }
 
+export interface BulkCreatePlatformObjectMapsPayload {
+  objectType: PlatformObjectType;
+  campaignId: string;
+  items: Array<{
+    platformAccountId: string;
+    externalId: string;
+    externalName?: string | null;
+  }>;
+  channelId?: string;
+  buyingTypeId?: string;
+  formatId?: string;
+  subFormatId?: string;
+  subGroupingIds?: string[];
+  isActive?: boolean;
+}
+
 export interface PlatformObjectMapQuery {
   platformAccountId?: string;
+  platformId?: string;
   campaignId?: string;
   objectType?: PlatformObjectType;
   isActive?: boolean;

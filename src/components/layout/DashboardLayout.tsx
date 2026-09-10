@@ -21,6 +21,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         component="main"
         sx={{
           flexGrow: 1,
+          minWidth: 0,
           overflow: 'auto',
         }}
       >

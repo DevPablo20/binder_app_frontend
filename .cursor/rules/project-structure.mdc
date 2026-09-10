@@ -54,15 +54,17 @@ src/
 │   └── RequireMinRole.tsx
 ├── pages/
 │   ├── Bridge/             # Vinculação (Superadmin) — see bridge-matching.mdc
-│   │   ├── BridgeTabs.tsx
+│   │   ├── BridgeHubPage.tsx      # entry cards at /dashboard/bridge
+│   │   ├── BridgeFlowTabs.tsx
 │   │   ├── BridgePageShell.tsx
 │   │   ├── AccountMatchingPage.tsx
-│   │   ├── CampaignMatchingPage.tsx
-│   │   ├── AdGroupMatchingPage.tsx
-│   │   ├── AdMatchingPage.tsx
-│   │   ├── ObjectMatchingPage.tsx
+│   │   ├── CampaignMatchingPage.tsx   # standalone (dialog flow)
+│   │   ├── AdGroupMatchingPage.tsx    # wrapper → ObjectMatchingPage
+│   │   ├── AdMatchingPage.tsx         # wrapper → ObjectMatchingPage
+│   │   ├── ObjectMatchingPage.tsx     # legacy flow (ad_group, ad)
 │   │   ├── catalogHelpers.ts
-│   │   └── components/     # CheckboxDataTable, BulkConfirmDialog
+│   │   └── components/     # CheckboxDataTable, BulkConfirmDialog,
+│   │                       # AssociateAccountsDialog, AssociateCampaignsDialog
 │   ├── Catalog/            # Platforms, Channels, BuyingTypes
 │   ├── Clients/
 │   ├── AdminPanel/
@@ -79,7 +81,7 @@ src/
 
 | Path | Page |
 |------|------|
-| `/dashboard/bridge` | redirect → `/dashboard/bridge/accounts` |
+| `/dashboard/bridge` | `BridgeHubPage` |
 | `/dashboard/bridge/accounts` | `AccountMatchingPage` |
 | `/dashboard/bridge/campaigns` | `CampaignMatchingPage` |
 | `/dashboard/bridge/ad-groups` | `AdGroupMatchingPage` |
@@ -108,7 +110,7 @@ Sibling: `../binder_app_backend/`
 | Auth | JWT `httpOnly` cookie `access_token` |
 | Fetch | `credentials: 'include'` via `apiFetch` |
 | Roles | `superadmin`, `editor`, `viewer` |
-| Bridge API | `/bridge/catalog/:platformId`, `/bridge/platform-accounts`, `/bridge/platform-object-maps` (incl. bulk DELETE) |
+| Bridge API | `/bridge/catalog/:platformId`, `/bridge/platform-accounts`, `/bridge/platform-object-maps` (both with `POST /bulk`, bulk `PATCH` and bulk `DELETE`) |
 
 Confirm contracts in `binder_app_backend/src/bridge/` — do not invent DTO fields.
 

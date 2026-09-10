@@ -1,8 +1,9 @@
-import { Box, Container, Stack, Typography } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { Box, Button, Container, Stack, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { BridgeTabs } from '@/pages/Bridge/BridgeTabs';
 
 interface BridgePageShellProps {
   title: string;
@@ -20,6 +21,15 @@ export function BridgePageShell({
       <Container maxWidth="lg" sx={{ py: 3 }}>
         <Stack spacing={3}>
           <Box>
+            <Button
+              component={RouterLink}
+              to="/dashboard/bridge"
+              startIcon={<ArrowBackIcon />}
+              size="small"
+              sx={{ mb: 1, px: 0 }}
+            >
+              Voltar para vinculação
+            </Button>
             <Typography variant="h4" component="h1" gutterBottom>
               {title}
             </Typography>
@@ -27,7 +37,6 @@ export function BridgePageShell({
               {description}
             </Typography>
           </Box>
-          <BridgeTabs />
           {children}
         </Stack>
       </Container>

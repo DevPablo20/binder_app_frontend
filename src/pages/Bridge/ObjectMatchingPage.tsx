@@ -31,6 +31,10 @@ import {
   updatePlatformObjectMaps,
 } from '@/api/platform-object-map';
 import { getSubGroupings } from '@/api/sub-grouping';
+import {
+  BridgeFlowTabs,
+  type BridgeFlowTab,
+} from '@/pages/Bridge/BridgeFlowTabs';
 import { BridgePageShell } from '@/pages/Bridge/BridgePageShell';
 import {
   catalogExternalId,
@@ -81,6 +85,7 @@ export function ObjectMatchingPage({ objectType }: ObjectMatchingPageProps) {
   const queryClient = useQueryClient();
   const copy = TITLES[objectType];
 
+  const [flowTab, setFlowTab] = useState<BridgeFlowTab>('vinculados');
   const [clientId, setClientId] = useState('');
   const [platformId, setPlatformId] = useState('');
   const [campaignId, setCampaignId] = useState('');
@@ -95,10 +100,14 @@ export function ObjectMatchingPage({ objectType }: ObjectMatchingPageProps) {
   const [apiError, setApiError] = useState<string | null>(null);
 
   const baseReady = Boolean(clientId && platformId && campaignId);
-  const targetsReady =
+  // Linked view only needs client/platform/campaign; create/edit enrichment
+  // for campaigns also requires channel + buying type (same filters as today).
+  const listReady = baseReady;
+  const createReady =
     objectType === 'campaign'
       ? baseReady && Boolean(channelId && buyingTypeId)
       : baseReady;
+  const targetsReady = flowTab === 'vinculados' ? listReady : createReady;
 
   const { data: platforms = [] } = useQuery({
     queryKey: ['platforms'],
@@ -194,13 +203,13 @@ export function ObjectMatchingPage({ objectType }: ObjectMatchingPageProps) {
         unmatchedOnly: true,
         clientId,
       }),
-    enabled: targetsReady,
+    enabled: createReady && flowTab === 'nova',
   });
 
   const linkedQuery = useQuery({
     queryKey: ['platform-object-maps', campaignId, objectType],
     queryFn: () => getPlatformObjectMaps({ campaignId, objectType }),
-    enabled: targetsReady,
+    enabled: listReady && flowTab === 'vinculados',
   });
 
   // Parent maps: ad_groups require mapped ETL campaigns; ads require mapped ETL ad_groups
@@ -218,7 +227,7 @@ export function ObjectMatchingPage({ objectType }: ObjectMatchingPageProps) {
         campaignId,
         objectType: parentObjectType!,
       }),
-    enabled: targetsReady && parentObjectType !== null,
+    enabled: createReady && flowTab === 'nova' && parentObjectType !== null,
   });
 
   const accountsQuery = useQuery({
@@ -408,6 +417,13 @@ export function ObjectMatchingPage({ objectType }: ObjectMatchingPageProps) {
   const showEditEnrichment =
     objectType === 'campaign' || objectType === 'ad_group';
 
+  const linkedLoading =
+    linkedQuery.isLoading || accountsQuery.isLoading;
+  const createLoading =
+    availableQuery.isLoading ||
+    accountsQuery.isLoading ||
+    (parentObjectType !== null && parentMapsQuery.isLoading);
+
   return (
     <BridgePageShell title={copy.title} description={copy.description}>
       <Stack spacing={3}>
@@ -586,9 +602,11 @@ export function ObjectMatchingPage({ objectType }: ObjectMatchingPageProps) {
           )}
         </Stack>
 
+        <BridgeFlowTabs value={flowTab} onChange={setFlowTab} />
+
         {!targetsReady && (
           <Alert severity="info">
-            {objectType === 'campaign'
+            {flowTab === 'nova' && objectType === 'campaign'
               ? 'Selecione cliente, plataforma, campanha Binder, canal e tipo de compra.'
               : 'Selecione cliente, plataforma e campanha Binder.'}
           </Alert>
@@ -597,16 +615,16 @@ export function ObjectMatchingPage({ objectType }: ObjectMatchingPageProps) {
         {apiError && <Alert severity="error">{apiError}</Alert>}
 
         {targetsReady &&
-          (availableQuery.isLoading ||
-            linkedQuery.isLoading ||
-            accountsQuery.isLoading ||
-            (parentObjectType !== null && parentMapsQuery.isLoading)) && (
+          ((flowTab === 'vinculados' && linkedLoading) ||
+            (flowTab === 'nova' && createLoading)) && (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
           </Box>
         )}
 
-        {targetsReady && availableQuery.isError && (
+        {targetsReady &&
+          flowTab === 'nova' &&
+          availableQuery.isError && (
           <Alert severity="error">
             {getErrorMessage(
               availableQuery.error,
@@ -615,7 +633,9 @@ export function ObjectMatchingPage({ objectType }: ObjectMatchingPageProps) {
           </Alert>
         )}
 
-        {targetsReady && linkedQuery.isError && (
+        {targetsReady &&
+          flowTab === 'vinculados' &&
+          linkedQuery.isError && (
           <Alert severity="error">
             {getErrorMessage(
               linkedQuery.error,
@@ -625,181 +645,188 @@ export function ObjectMatchingPage({ objectType }: ObjectMatchingPageProps) {
         )}
 
         {targetsReady &&
-          !availableQuery.isLoading &&
-          !linkedQuery.isLoading &&
-          !accountsQuery.isLoading &&
-          !(parentObjectType !== null && parentMapsQuery.isLoading) && (
-            <>
-              <Box>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={2}
-                  sx={{
-                    mb: 1,
-                    alignItems: { sm: 'center' },
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Typography variant="h6">{copy.availableLabel}</Typography>
-                  <Button
-                    variant="contained"
-                    disabled={availableSelected.size === 0 || isBusy}
-                    onClick={() => setConfirm('associate')}
-                  >
-                    Associar selecionados ({availableSelected.size})
-                  </Button>
-                </Stack>
-                <CheckboxDataTable
-                  rows={availableItems}
-                  getRowId={(row) => {
-                    const externalId = catalogExternalId(row, objectType);
-                    return `${row.platformAccountId ?? 'none'}:${externalId}`;
-                  }}
-                  selectedIds={availableSelected}
-                  onToggle={(id) =>
-                    setAvailableSelected((prev) => toggleIdInSet(prev, id))
-                  }
-                  onToggleAll={(ids) =>
-                    setAvailableSelected((prev) => toggleAllInSet(prev, ids))
-                  }
-                  isRowDisabled={(row) => !row.platformAccountId}
-                  columns={[
-                    {
-                      id: 'externalId',
-                      header: 'ID externo',
-                      render: (row) => catalogExternalId(row, objectType),
-                    },
-                    {
-                      id: 'name',
-                      header: 'Nome',
-                      render: (row) =>
-                        catalogExternalName(row, objectType) ?? '—',
-                    },
-                    {
-                      id: 'account',
-                      header: 'Conta',
-                      render: (row) => row.accountName,
-                    },
-                    ...(objectType !== 'campaign'
-                      ? [
-                          {
-                            id: 'parent',
-                            header:
-                              objectType === 'ad_group'
-                                ? 'Campanha ETL'
-                                : 'Ad group',
-                            render: (row: CatalogItem) =>
-                              objectType === 'ad_group'
-                                ? (row.campaignName ?? '—')
-                                : (row.adGroupName ?? '—'),
-                          },
-                        ]
-                      : []),
-                    {
-                      id: 'ready',
-                      header: 'Conta vinculada',
-                      render: (row) =>
-                        row.platformAccountId ? 'Sim' : 'Não — vincule a conta',
-                    },
-                  ]}
-                  emptyMessage={
-                    objectType === 'ad_group'
-                      ? 'Nenhum ad group disponível. Vincule primeiro as campanhas ETL desta campanha Binder.'
-                      : objectType === 'ad'
-                        ? 'Nenhum anúncio disponível. Vincule primeiro os ad groups ETL desta campanha Binder.'
-                        : 'Nenhum item ETL disponível para estes filtros.'
-                  }
-                />
-              </Box>
-
-              <Box>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={2}
-                  sx={{
-                    mb: 1,
-                    alignItems: { sm: 'center' },
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <Typography variant="h6">
-                    Vinculados a esta campanha Binder
-                  </Typography>
-                  <Stack direction="row" spacing={1}>
-                    {showEditEnrichment && (
-                      <Button
-                        variant="outlined"
-                        disabled={linkedSelected.size === 0 || isBusy}
-                        onClick={() => setConfirm('editEnrichment')}
-                      >
-                        Atualizar enriquecimento
-                      </Button>
-                    )}
+          flowTab === 'vinculados' &&
+          !linkedLoading &&
+          !linkedQuery.isError && (
+            <Box>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={2}
+                sx={{
+                  mb: 1,
+                  alignItems: { sm: 'center' },
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <Typography variant="h6">
+                  Vinculados a esta campanha Binder
+                </Typography>
+                <Stack direction="row" spacing={1}>
+                  {showEditEnrichment && (
                     <Button
                       variant="outlined"
-                      color="error"
-                      disabled={linkedSelected.size === 0 || isBusy}
-                      onClick={() => setConfirm('remove')}
+                      disabled={
+                        linkedSelected.size === 0 ||
+                        isBusy ||
+                        (objectType === 'campaign' &&
+                          !(channelId && buyingTypeId))
+                      }
+                      onClick={() => setConfirm('editEnrichment')}
                     >
-                      Remover ({linkedSelected.size})
+                      Atualizar enriquecimento
                     </Button>
-                  </Stack>
+                  )}
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    disabled={linkedSelected.size === 0 || isBusy}
+                    onClick={() => setConfirm('remove')}
+                  >
+                    Remover ({linkedSelected.size})
+                  </Button>
                 </Stack>
-                <CheckboxDataTable
-                  rows={linkedMaps}
-                  getRowId={(row: PlatformObjectMapSummary) => row.id}
-                  selectedIds={linkedSelected}
-                  onToggle={(id) =>
-                    setLinkedSelected((prev) => toggleIdInSet(prev, id))
-                  }
-                  onToggleAll={(ids) =>
-                    setLinkedSelected((prev) => toggleAllInSet(prev, ids))
-                  }
-                  columns={[
-                    {
-                      id: 'externalId',
-                      header: 'ID externo',
-                      render: (row) => row.externalId,
-                    },
-                    {
-                      id: 'name',
-                      header: 'Nome',
-                      render: (row) => row.externalName ?? '—',
-                    },
-                    ...(objectType === 'campaign'
-                      ? [
-                          {
-                            id: 'channel',
-                            header: 'Canal',
-                            render: (row: PlatformObjectMapSummary) =>
-                              row.channelId ?? '—',
-                          },
-                          {
-                            id: 'buying',
-                            header: 'Tipo de compra',
-                            render: (row: PlatformObjectMapSummary) =>
-                              row.buyingTypeId ?? '—',
-                          },
-                        ]
-                      : []),
-                    ...(objectType === 'ad_group'
-                      ? [
-                          {
-                            id: 'subGroupings',
-                            header: 'Subagrupamentos',
-                            render: (row: PlatformObjectMapSummary) =>
-                              row.subGroupingIds.length > 0
-                                ? String(row.subGroupingIds.length)
-                                : '—',
-                          },
-                        ]
-                      : []),
-                  ]}
-                  emptyMessage="Nenhum mapeamento vinculado a esta campanha Binder."
-                />
-              </Box>
-            </>
+              </Stack>
+              <CheckboxDataTable
+                rows={linkedMaps}
+                getRowId={(row: PlatformObjectMapSummary) => row.id}
+                selectedIds={linkedSelected}
+                onToggle={(id) =>
+                  setLinkedSelected((prev) => toggleIdInSet(prev, id))
+                }
+                onToggleAll={(ids) =>
+                  setLinkedSelected((prev) => toggleAllInSet(prev, ids))
+                }
+                columns={[
+                  {
+                    id: 'externalId',
+                    header: 'ID externo',
+                    render: (row) => row.externalId,
+                  },
+                  {
+                    id: 'name',
+                    header: 'Nome',
+                    render: (row) => row.externalName ?? '—',
+                  },
+                  ...(objectType === 'campaign'
+                    ? [
+                        {
+                          id: 'channel',
+                          header: 'Canal',
+                          render: (row: PlatformObjectMapSummary) =>
+                            row.channelId ?? '—',
+                        },
+                        {
+                          id: 'buying',
+                          header: 'Tipo de compra',
+                          render: (row: PlatformObjectMapSummary) =>
+                            row.buyingTypeId ?? '—',
+                        },
+                      ]
+                    : []),
+                  ...(objectType === 'ad_group'
+                    ? [
+                        {
+                          id: 'subGroupings',
+                          header: 'Subagrupamentos',
+                          render: (row: PlatformObjectMapSummary) =>
+                            row.subGroupingIds.length > 0
+                              ? String(row.subGroupingIds.length)
+                              : '—',
+                        },
+                      ]
+                    : []),
+                ]}
+                emptyMessage="Nenhum mapeamento vinculado a esta campanha Binder."
+              />
+            </Box>
+          )}
+
+        {targetsReady &&
+          flowTab === 'nova' &&
+          !createLoading &&
+          !availableQuery.isError && (
+            <Box>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={2}
+                sx={{
+                  mb: 1,
+                  alignItems: { sm: 'center' },
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Typography variant="h6">{copy.availableLabel}</Typography>
+                <Button
+                  variant="contained"
+                  disabled={availableSelected.size === 0 || isBusy}
+                  onClick={() => setConfirm('associate')}
+                >
+                  Associar selecionados ({availableSelected.size})
+                </Button>
+              </Stack>
+              <CheckboxDataTable
+                rows={availableItems}
+                getRowId={(row) => {
+                  const externalId = catalogExternalId(row, objectType);
+                  return `${row.platformAccountId ?? 'none'}:${externalId}`;
+                }}
+                selectedIds={availableSelected}
+                onToggle={(id) =>
+                  setAvailableSelected((prev) => toggleIdInSet(prev, id))
+                }
+                onToggleAll={(ids) =>
+                  setAvailableSelected((prev) => toggleAllInSet(prev, ids))
+                }
+                isRowDisabled={(row) => !row.platformAccountId}
+                columns={[
+                  {
+                    id: 'externalId',
+                    header: 'ID externo',
+                    render: (row) => catalogExternalId(row, objectType),
+                  },
+                  {
+                    id: 'name',
+                    header: 'Nome',
+                    render: (row) =>
+                      catalogExternalName(row, objectType) ?? '—',
+                  },
+                  {
+                    id: 'account',
+                    header: 'Conta',
+                    render: (row) => row.accountName,
+                  },
+                  ...(objectType !== 'campaign'
+                    ? [
+                        {
+                          id: 'parent',
+                          header:
+                            objectType === 'ad_group'
+                              ? 'Campanha ETL'
+                              : 'Ad group',
+                          render: (row: CatalogItem) =>
+                            objectType === 'ad_group'
+                              ? (row.campaignName ?? '—')
+                              : (row.adGroupName ?? '—'),
+                        },
+                      ]
+                    : []),
+                  {
+                    id: 'ready',
+                    header: 'Conta vinculada',
+                    render: (row) =>
+                      row.platformAccountId ? 'Sim' : 'Não — vincule a conta',
+                  },
+                ]}
+                emptyMessage={
+                  objectType === 'ad_group'
+                    ? 'Nenhum ad group disponível. Vincule primeiro as campanhas ETL desta campanha Binder.'
+                    : objectType === 'ad'
+                      ? 'Nenhum anúncio disponível. Vincule primeiro os ad groups ETL desta campanha Binder.'
+                      : 'Nenhum item ETL disponível para estes filtros.'
+                }
+              />
+            </Box>
           )}
       </Stack>
 
