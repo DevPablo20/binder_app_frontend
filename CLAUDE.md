@@ -18,7 +18,7 @@ O que muda, no passo 9 do plano (depois que o backend entregar os passos 4–7):
 | Contas | mapeia conta → cliente | **sem mudança** |
 | Campanhas | `PlatformObjectMap` `campaign` + channel + buying type | `platform_campaign_binding` — mesma UX, endpoint novo |
 | Ad groups | `ObjectMatchingPage` legado, alvos nos filtros do topo | tela própria no fluxo de diálogo, com um seletor **single-select por eixo** |
-| Ads | classificar formato ad a ad (adiado, sem UI) | **muda de natureza**: manter ~6 traduções por plataforma, mais exceção pontual |
+| Ads | classificar formato ad a ad (adiado, sem UI) | **muda de natureza**: manter poucas traduções por plataforma (3 no TikTok hoje), mais exceção pontual |
 | Publicação | não existe | alerta de alterações não materializadas + botão Publicar |
 | Cobertura | não existe | card de "% do investimento classificado" nos relatórios |
 

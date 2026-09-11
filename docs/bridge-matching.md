@@ -76,7 +76,7 @@ bloqueio silencioso para quem tenta classificar ad groups.
 Filtro: **plataforma** e **cliente**.
 
 É o único nível onde eixos são atribuídos. Aqui mora o trabalho real de configuração — na
-ordem de ~119 decisões para o histórico de TikTok já ingerido.
+ordem de ~350 decisões para o histórico de TikTok já ingerido.
 
 - Só aparecem ad groups cuja campanha **já está vinculada**. Os demais vão para a fila de
   pendências do fluxo de campanhas, com o motivo explícito
@@ -88,8 +88,8 @@ ordem de ~119 decisões para o histórico de TikTok já ingerido.
 ## Ads — tradução de formato
 
 Este fluxo **mudou de natureza**. Não é mais classificar ad a ad; é manter a tabela de
-tradução `(plataforma, valor nativo) → (format, sub-format)` — cerca de seis linhas por
-plataforma, contra 311 ads.
+tradução `(plataforma, valor nativo) → (format, sub-format)` — três linhas no TikTok hoje
+(`SINGLE_VIDEO`, `CAROUSEL_ADS` e formato nulo), contra 675 ads.
 
 - Tela principal: a tabela de tradução da plataforma, editável
 - **Fila de pendências**: valores nativos vistos no lake sem tradução, **ordenados por
