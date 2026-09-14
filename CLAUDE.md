@@ -6,24 +6,15 @@ Painel administrativo Vite + React + MUI da plataforma Binder. Consome o `binder
 O trabalho central desta UI é a **Vinculação (Bridge)**: transformar identidades cruas do lake
 em dados classificados com vocabulário de negócio. Escrita é Superadmin.
 
-## Estado desta branch
+## Iniciativa ativa
 
-`arch/bridge-enrichment` reorganiza a documentação para a arquitetura decidida. **O código
-ainda é o antigo** — as telas atuais falam com `PlatformObjectMap`, que vai ser substituído.
+`bridge-enrichment` — plano único dos três repositórios em
+`binder_etl/docs/plans/bridge-enrichment.md` (repositório irmão): passos, próxima ação,
+decisões em aberto e o que existe hoje × alvo nesta UI.
 
-O que muda, no passo 9 do plano (depois que o backend entregar os passos 4–7):
-
-| Fluxo | Hoje | Alvo |
-|---|---|---|
-| Contas | mapeia conta → cliente | **sem mudança** |
-| Campanhas | `PlatformObjectMap` `campaign` + channel + buying type | `platform_campaign_binding` — mesma UX, endpoint novo |
-| Ad groups | `ObjectMatchingPage` legado, alvos nos filtros do topo | tela própria no fluxo de diálogo, com um seletor **single-select por eixo** |
-| Ads | classificar formato ad a ad (adiado, sem UI) | **muda de natureza**: manter poucas traduções por plataforma (3 no TikTok hoje), mais exceção pontual |
-| Publicação | não existe | alerta de alterações não materializadas + botão Publicar |
-| Cobertura | não existe | card de "% do investimento classificado" nos relatórios |
-
-Não descreva o alvo como se já existisse. Contratos de API: leia
-`binder_app_backend/src/bridge/` — não invente campo de DTO.
+**As telas atuais falam com o `PlatformObjectMap` legado.** Não descreva uma tela ou fluxo
+alvo como se já existisse. Contratos de API: leia `binder_app_backend/src/bridge/` — não
+invente campo de DTO.
 
 ## Arquitetura de enriquecimento (invariantes compartilhadas)
 
@@ -99,3 +90,26 @@ docker compose up
 | [docs/project-structure.md](docs/project-structure.md) | árvore de diretórios, providers, rotas |
 | [docs/mui-theme.md](docs/mui-theme.md) | tema Binder, tokens, componentes |
 | [docs/tech-stack.md](docs/tech-stack.md) | versões e práticas por biblioteca |
+
+## Onde cada informação mora (compartilhado)
+
+| Tipo | Onde |
+|---|---|
+| Regra que vale sempre | `CLAUDE.md` |
+| Como e por que funciona; desenho decidido | `docs/*.md` — no presente, sem data, sem número de passo, volumes em ordem de grandeza |
+| O que falta, status, decisões em aberto, medições datadas | `docs/plans/<iniciativa>.md` |
+| Ideia ainda sem escopo | `docs/plans/backlog.md` |
+
+Iniciativa que envolve mais de um repositório tem um plano só, no repositório onde começou;
+os outros apontam para ele.
+
+Todo passo de uma iniciativa termina com: testes verdes → status e diário atualizados no
+plano → regra nova sobe para o `CLAUDE.md` e mudança de desenho para `docs/` → rótulos
+"alvo"/"legado" que ficaram falsos saem → a checagem abaixo volta vazia. Ao encerrar a
+iniciativa, o plano é apagado e o ponteiro sai do `CLAUDE.md`.
+
+```bash
+grep -rnE "\bpasso [0-9]|\bfeito\b|[0-9]{2}/[0-9]{2}/20[0-9]{2}" CLAUDE.md docs .claude --exclude-dir=plans 2>/dev/null
+```
+
+> Este bloco é espelhado nos três repositórios. Ao mudar, mude nos três.

@@ -31,9 +31,9 @@ Nav: seção **Vinculação** (`bridge`) em `../src/navigation/navConfig.ts`.
 
 O diálogo vale para a **seleção inteira**. Não degrade para uma linha por vez.
 
-**Migração em andamento:** contas e campanhas já usam esse fluxo. Ad groups e ads ainda são
-wrappers finos sobre o `ObjectMatchingPage` legado, com alvos nos filtros do topo. Porte para
-o fluxo de diálogo antes de adicionar feature neles.
+Contas e campanhas usam esse fluxo. Ad groups e ads são wrappers finos sobre o
+`ObjectMatchingPage` legado, com alvos nos filtros do topo — porte para o fluxo de diálogo
+antes de adicionar feature neles.
 
 ## Contas
 
@@ -76,7 +76,7 @@ bloqueio silencioso para quem tenta classificar ad groups.
 Filtro: **plataforma** e **cliente**.
 
 É o único nível onde eixos são atribuídos. Aqui mora o trabalho real de configuração — na
-ordem de ~350 decisões para o histórico de TikTok já ingerido.
+ordem de centenas de decisões para o histórico de TikTok já ingerido.
 
 - Só aparecem ad groups cuja campanha **já está vinculada**. Os demais vão para a fila de
   pendências do fluxo de campanhas, com o motivo explícito
@@ -88,8 +88,8 @@ ordem de ~350 decisões para o histórico de TikTok já ingerido.
 ## Ads — tradução de formato
 
 Este fluxo **mudou de natureza**. Não é mais classificar ad a ad; é manter a tabela de
-tradução `(plataforma, valor nativo) → (format, sub-format)` — três linhas no TikTok hoje
-(`SINGLE_VIDEO`, `CAROUSEL_ADS` e formato nulo), contra 675 ads.
+tradução `(plataforma, valor nativo) → (format, sub-format)` — poucas linhas por plataforma
+(no TikTok: `SINGLE_VIDEO`, `CAROUSEL_ADS` e formato nulo), contra centenas de ads.
 
 - Tela principal: a tabela de tradução da plataforma, editável
 - **Fila de pendências**: valores nativos vistos no lake sem tradução, **ordenados por

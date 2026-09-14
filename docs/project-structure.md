@@ -38,7 +38,7 @@ src/
 │   ├── client.ts
 │   ├── bridge-catalog.ts
 │   ├── platform-account.ts
-│   ├── platform-object-map.ts        # LEGADO — sai no passo 9
+│   ├── platform-object-map.ts        # LEGADO — substituído pelos endpoints do modelo alvo
 │   └── client-api.ts, campaign.ts, platform.ts, channel.ts, grouping.ts, …
 ├── auth/                   # AuthProvider, roles, useAuth
 ├── company/                # ActiveCompanyProvider
@@ -113,6 +113,6 @@ Confirme contratos em `binder_app_backend/src/bridge/` — **não invente campo 
 2. A UI de vinculação **existe** (`pages/Bridge/`, APIs de bridge, seção `bridge` no nav).
 3. Para comportamento de vinculação, siga [bridge-matching.md](bridge-matching.md).
 4. As telas de **publicação**, **fila de pendências de tradução** e **card de cobertura**
-   ainda **não existem** — são o passo 9 do plano.
+   ainda **não existem** — são alvo.
 5. `platform-object-map.ts` e `ObjectMatchingPage` são legado. Não construa feature nova
-   sobre eles; não remova antes do passo 9.
+   sobre eles, e não os remova fora do plano da iniciativa ativa.

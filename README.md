@@ -7,8 +7,8 @@ Frontend da Plataforma Binder — painel administrativo multi-empresa consumindo
 - Vite + React + TypeScript
 - Material UI (MUI)
 - TanStack Query
-- React Router (instalado, rotas na fase 2)
-- react-hook-form + zod (formulários na fase 3)
+- React Router
+- react-hook-form + zod
 
 ## Pré-requisitos
 
@@ -79,23 +79,7 @@ A imagem final usa nginx para servir os arquivos estáticos com fallback SPA.
 
 ## Estrutura do projeto
 
-```
-src/
-├── api/          # Cliente HTTP (fase 2)
-├── auth/         # Sessão e guards (fase 2)
-├── components/   # UI reutilizável (fase 3)
-├── hooks/        # Hooks compartilhados (fase 3)
-├── pages/        # Telas (fase 3)
-├── routes/       # Rotas (fase 2)
-├── theme/        # Tema MUI
-└── types/        # Tipos compartilhados (fase 2)
-```
-
-## Próximas fases
-
-1. **Infra de API e auth** — cliente `fetch` com `credentials`, contexto de sessão (`/access/users/me`), rotas protegidas
-2. **Telas core** — login, dashboard, empresas, usuários, convites
-3. **Fluxos públicos** — aceitar/recusar convite, reset de senha
+Árvore de `src/`, providers e convenções: [docs/project-structure.md](docs/project-structure.md).
 
 ## Integração com o backend
 
