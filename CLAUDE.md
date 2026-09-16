@@ -67,8 +67,10 @@ Valem nos três repositórios. Contradizer uma delas é bug, não escolha de imp
 - **Ações em lote são em lote.** O diálogo de associação coleta os alvos uma vez e envia um
   único request bulk. Não degrade para uma linha por vez, e não use `POST` paralelos — deixam
   estado parcial quando um item falha.
-- **Uma conta de anúncio pode servir vários clientes** (caso real de agência). A chave é
-  `UNIQUE (platform, external_account_id, client)` — nunca assuma dono único.
+- **Uma conta de anúncio pertence a exatamente um cliente.** A chave é
+  `UNIQUE (platform, external_account_id)`. O fato do lake não carrega cliente: se a mesma
+  conta rendesse uma linha por cliente, o join do enriquecimento duplicaria a métrica.
+  Um cliente com **várias contas** é normal e suportado — o inverso não existe.
 - **Não contorne regra de nível na UI.** Se o backend recusa, a tela está errada.
 - **Não criar código de backend a partir deste repo.**
 - Não editar: `dist/`, `node_modules/`.

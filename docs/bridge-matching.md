@@ -39,16 +39,17 @@ antes de adicionar feature neles.
 
 Filtro: **plataforma**.
 
-Uma conta de anúncio pode servir **vários clientes** — caso real de agência. A chave do
-backend é `UNIQUE (platform, external_account_id, client)`, então a mesma conta rende uma
-linha por cliente. Nunca assuma dono único.
+Uma conta de anúncio pertence a **exatamente um cliente**: a chave do backend é
+`UNIQUE (platform, external_account_id)`. O caminho inverso é livre — um cliente pode ter
+quantas contas precisar, inclusive duas contas cobrindo períodos diferentes da mesma
+campanha de negócio.
 
 - Disponíveis: `GET /bridge/catalog/:platformId?objectType=account&unmatchedOnly=true`
 - Vinculados: `GET /bridge/platform-accounts?platformId=` — linhas trazem `clientName` e
   `platformName`; renderize nomes
-- Associar: `AssociateAccountsDialog` escolhe um ou mais clientes →
-  `POST /bridge/platform-accounts/bulk` `{ platformId, accounts[], clientIds[] }`, que grava
-  o produto cartesiano contas × clientes
+- Associar: `AssociateAccountsDialog` escolhe **um** cliente →
+  `POST /bridge/platform-accounts/bulk` `{ platformId, accounts[], clientId }`, que grava uma
+  linha por conta selecionada
 - Remover: `DELETE /bridge/platform-accounts` `{ ids }` — **cascateia todos os filhos**
 - Trocar cliente: confirmar → `PATCH` com o novo `clientId` (o backend apaga os filhos antes)
 

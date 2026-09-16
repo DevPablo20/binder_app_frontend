@@ -54,7 +54,7 @@ export interface BulkCreatePlatformAccountsPayload {
     externalAccountId: string;
     name: string;
   }>;
-  clientIds: string[];
+  clientId: string;
   isActive?: boolean;
 }
 

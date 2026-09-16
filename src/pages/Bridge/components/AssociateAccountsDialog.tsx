@@ -1,13 +1,13 @@
 import {
   Alert,
   Button,
-  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   FormControlLabel,
-  FormGroup,
+  Radio,
+  RadioGroup,
   Stack,
   Typography,
 } from '@mui/material';
@@ -23,8 +23,8 @@ interface AssociateAccountsDialogProps {
   open: boolean;
   accounts: AssociateAccountPreview[];
   clients: ClientSummary[];
-  selectedClientIds: string[];
-  onSelectedClientIdsChange: (clientIds: string[]) => void;
+  selectedClientId: string;
+  onSelectedClientIdChange: (clientId: string) => void;
   loading?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
@@ -34,29 +34,17 @@ export function AssociateAccountsDialog({
   open,
   accounts,
   clients,
-  selectedClientIds,
-  onSelectedClientIdsChange,
+  selectedClientId,
+  onSelectedClientIdChange,
   loading = false,
   onCancel,
   onConfirm,
 }: AssociateAccountsDialogProps) {
   const activeClients = clients.filter((client) => client.isActive);
-  const selectedClients = activeClients.filter((client) =>
-    selectedClientIds.includes(client.id),
+  const selectedClient = activeClients.find(
+    (client) => client.id === selectedClientId,
   );
-  const isMultiClient = selectedClientIds.length > 1;
-  const canConfirm =
-    accounts.length > 0 && selectedClientIds.length > 0 && !loading;
-
-  const toggleClient = (clientId: string) => {
-    if (selectedClientIds.includes(clientId)) {
-      onSelectedClientIdsChange(
-        selectedClientIds.filter((id) => id !== clientId),
-      );
-      return;
-    }
-    onSelectedClientIdsChange([...selectedClientIds, clientId]);
-  };
+  const canConfirm = accounts.length > 0 && Boolean(selectedClient) && !loading;
 
   return (
     <Dialog
@@ -69,52 +57,40 @@ export function AssociateAccountsDialog({
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           <Typography variant="body2" color="text.secondary">
-            Selecione um ou mais clientes para associar às {accounts.length}{' '}
-            conta(s) ETL selecionada(s).
+            Selecione o cliente dono das {accounts.length} conta(s) ETL
+            selecionada(s). Cada conta pertence a exatamente um cliente.
           </Typography>
 
-          <FormGroup>
+          <RadioGroup
+            value={selectedClientId}
+            onChange={(event) => onSelectedClientIdChange(event.target.value)}
+          >
             {activeClients.map((client) => (
               <FormControlLabel
                 key={client.id}
-                control={
-                  <Checkbox
-                    checked={selectedClientIds.includes(client.id)}
-                    onChange={() => toggleClient(client.id)}
-                    disabled={loading}
-                  />
-                }
+                value={client.id}
+                control={<Radio disabled={loading} />}
                 label={client.name}
               />
             ))}
-          </FormGroup>
+          </RadioGroup>
 
           {activeClients.length === 0 && (
             <Alert severity="warning">Nenhum cliente ativo disponível.</Alert>
           )}
 
-          {selectedClients.length > 0 && (
+          {selectedClient && (
             <Stack spacing={1}>
-              <Typography variant="subtitle2">Confira as associações</Typography>
-              {accounts.map((account) =>
-                selectedClients.map((client) => (
-                  <Typography
-                    key={`${account.externalAccountId}:${client.id}`}
-                    variant="body2"
-                  >
-                    {account.accountName} ({account.externalAccountId}) →{' '}
-                    {client.name}
-                  </Typography>
-                )),
-              )}
+              <Typography variant="subtitle2">
+                Confira as associações
+              </Typography>
+              {accounts.map((account) => (
+                <Typography key={account.externalAccountId} variant="body2">
+                  {account.accountName} ({account.externalAccountId}) →{' '}
+                  {selectedClient.name}
+                </Typography>
+              ))}
             </Stack>
-          )}
-
-          {isMultiClient && (
-            <Alert severity="warning">
-              Você selecionou mais de um cliente. Cada conta ETL será vinculada
-              a todos os clientes escolhidos. Confirme se isso é intencional.
-            </Alert>
           )}
         </Stack>
       </DialogContent>
@@ -122,11 +98,7 @@ export function AssociateAccountsDialog({
         <Button onClick={onCancel} disabled={loading}>
           Cancelar
         </Button>
-        <Button
-          variant="contained"
-          onClick={onConfirm}
-          disabled={!canConfirm}
-        >
+        <Button variant="contained" onClick={onConfirm} disabled={!canConfirm}>
           Confirmar associação
         </Button>
       </DialogActions>
