@@ -40,6 +40,14 @@ Valem nos três repositórios. Contradizer uma delas é bug, não escolha de imp
 | Território, Persona, … | ad_group | ad | configuração |
 | Format / Sub-format | ad | — | traduzido do nativo |
 
+**Identificação e classificação.** A tabela acima tem dois tipos de linha. *Identificação* diz
+a que entidade de negócio o objeto pertence — conta → cliente, campanha da plataforma →
+campanha de negócio. É declarada uma vez e herdada por toda a hierarquia abaixo; nenhum nível
+abaixo a digita. *Classificação* anexa atributos: channel, buying type, eixos, formato. O
+vocabulário disponível para classificar um nível é limitado pelo escopo que a identificação de
+cima estabeleceu — os eixos de um ad_group são os da campanha de negócio do binding dele, e
+não outros. Por isso o nível de ad_group só classifica: a identificação ele herda.
+
 > Este bloco é espelhado em `binder_app_backend/CLAUDE.md` e `binder_etl/CLAUDE.md`.
 > Ao mudar, mude nos três.
 
@@ -71,6 +79,10 @@ Valem nos três repositórios. Contradizer uma delas é bug, não escolha de imp
   `UNIQUE (platform, external_account_id)`. O fato do lake não carrega cliente: se a mesma
   conta rendesse uma linha por cliente, o join do enriquecimento duplicaria a métrica.
   Um cliente com **várias contas** é normal e suportado — o inverso não existe.
+- **Filtro é navegação, não dado.** Usar a campanha para achar os objetos é correto; gravar
+  o filtro na linha não. Abaixo do vínculo de campanha, a campanha de negócio é derivada — o
+  `ObjectMatchingPage` legado grava o filtro do topo em `platform_object_map.campaign_id`, e é
+  justamente isso que as telas novas não repetem.
 - **Não contorne regra de nível na UI.** Se o backend recusa, a tela está errada.
 - **Não criar código de backend a partir deste repo.**
 - Não editar: `dist/`, `node_modules/`.
